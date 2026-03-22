@@ -1,7 +1,7 @@
 [project]
-name = "backend"
+name = "debate-it-out"
 version = "0.1.0"
-description = "Add your description here"
+description = "DebateItOut — multi-model AI debate orchestrator"
 requires-python = ">=3.13"
 dependencies = [
     "asyncpg>=0.31.0",
