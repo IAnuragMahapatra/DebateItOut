@@ -1,17 +1,17 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: promptcouncil-db
+    container_name: debateitout-db
     environment:
-      POSTGRES_USER: assistant
-      POSTGRES_PASSWORD: assistant
-      POSTGRES_DB: assistant
+      POSTGRES_USER: debateitout
+      POSTGRES_PASSWORD: debateitout
+      POSTGRES_DB: debateitout
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - debateitout_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U assistant -d assistant"]
+      test: ["CMD-SHELL", "pg_isready -U debateitout -d debateitout"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -20,14 +20,14 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: promptcouncil-backend
+    container_name: debateitout-backend
     ports:
-      - "${PORT:-3001}:3001"
+      - "${PORT:-3002}:3002"
     env_file:
       - ./backend/.env
     environment:
       DB_HOST: db
-      PORT: "3001"
+      PORT: "3002"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -37,4 +37,4 @@ services:
       - ./frontend:/frontend:ro
 
 volumes:
-  postgres_data:
+  debateitout_data:
