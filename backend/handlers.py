@@ -90,4 +90,6 @@ async def dispatch(model: dict, system: str, messages: list[dict]) -> dict:
     """Single entry point — routes to anthropic or openai based on model type."""
     if model["type"] == "anthropic":
         return await chat_anthropic(model, system, messages)
-    return await chat_openai(model, messages)
+    # OpenAI-compatible endpoints take system as the first message
+    full_messages = [{"role": "system", "content": system}] + messages
+    return await chat_openai(model, full_messages)
