@@ -1,59 +1,88 @@
+const API = "";
+marked.setOptions({ breaks: true, gfm: true });
 
-const API_BASE = "";
-const WELCOME_MESSAGES = [
-  "Hello there! Ready to start chatting?",
-  "Greetings! How can I help you today?",
-  "Welcome! Let's explore some ideas together.",
-  "Hi! I'm here and ready to assist you.",
-  "Good to see you! What's on your mind?",
-  "Hello! Let's get this conversation started.",
-  "Welcome back! How can I be of service?",
-  "Hi there! Curious about something? Let's chat.",
-];
-const GREETING = WELCOME_MESSAGES[Math.floor(Math.random() * WELCOME_MESSAGES.length)];
-let sessions = [];
-let activeSessionId = null;
-let messages = [];
-let sidebarOpen = false;
+// ─── State ──────────────────────────────────────────────────
+let debates = [];
+let activeDebateId = null;
+let activeDebate = null;    // full debate object
 let models = [];
-let selectedModel = null;
-let modelsLoading = true;
-let loading = false;
-let editingSessionId = null;     // sidebar inline rename
-let editingHeader = false;       // header rename
+let sidebarOpen = false;
 let searchQuery = "";
-let confirmDeleteId = null;      // session pending delete confirm
+let editingDebateId = null;
+let confirmDeleteId = null;
+let advancing = false;
+
 const $ = (sel, ctx = document) => ctx.querySelector(sel);
 const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
 
-const sidebar         = $("#sidebar");
-const sidebarOverlay  = $("#sidebar-overlay");
-const sidebarList     = $("#sidebar-list");
-const sidebarSearch   = $("#sidebar-search");
-const mobileToggle    = $("#mobile-toggle");
-const sidebarToggle   = $("#sidebar-toggle");
-const newChatBtn      = $("#new-chat-btn");
-const chatHeader      = $("#chat-header-title");
-const headerInput     = $("#header-rename-input");
-const exportBtn       = $("#export-btn");
-const chatBox         = $("#chat-box");
-const modelSelector   = $("#model-selector");
-const textarea        = $("#input-field");
-const sendBtn         = $("#send-button");
-marked.setOptions({ breaks: true, gfm: true });
-function getDisplayName(session) {
-  if (session.customName) return session.customName;
-  if (session.preview) {
-    const words = session.preview.trim().split(/\s+/);
-    return words.slice(0, 6).join(" ") + (words.length > 6 ? "…" : "");
+// ─── DOM refs ───────────────────────────────────────────────
+const sidebar          = $("#sidebar");
+const sidebarOverlay   = $("#sidebar-overlay");
+const sidebarList      = $("#sidebar-list");
+const sidebarSearch    = $("#sidebar-search");
+const mobileToggle     = $("#mobile-toggle");
+const sidebarToggle    = $("#sidebar-toggle");
+const newDebateBtn     = $("#new-debate-btn");
+const emptyState       = $("#empty-state");
+const emptyNewBtn      = $("#empty-new-btn");
+const debateView       = $("#debate-view");
+const debateHeader     = $("#debate-header");
+const debateStatusBadge = $("#debate-status-badge");
+const debateRoundIndicator = $("#debate-round-indicator");
+const debateProposition = $("#debate-proposition");
+const moderatorLogInner = $("#moderator-log-inner");
+const factionAStance   = $("#faction-a-stance");
+const factionBStance   = $("#faction-b-stance");
+const factionAModels   = $("#faction-a-models");
+const factionBModels   = $("#faction-b-models");
+const factionATurns    = $("#faction-a-turns");
+const factionBTurns    = $("#faction-b-turns");
+const controlBar       = $("#control-bar");
+const advanceBtn       = $("#advance-btn");
+const headerRenameBtn  = $("#header-rename-btn");
+
+// modal refs
+const createModal    = $("#create-modal");
+const modalClose     = $("#modal-close");
+const modalCancel    = $("#modal-cancel");
+const modalSubmit    = $("#modal-submit");
+const propositionInput = $("#proposition-input");
+const factionAStanceInput = $("#faction-a-stance-input");
+const factionBStanceInput = $("#faction-b-stance-input");
+const factionAPicker = $("#faction-a-picker");
+const factionBPicker = $("#faction-b-picker");
+const maxRoundsInput = $("#max-rounds-input");
+
+const renameModal    = $("#rename-modal");
+const renameModalClose = $("#rename-modal-close");
+const renameCancel   = $("#rename-cancel");
+const renameSubmit   = $("#rename-submit");
+const renameInput    = $("#rename-input");
+
+// ─── API helpers ─────────────────────────────────────────────
+async function api(path, opts = {}) {
+  const res = await fetch(API + path, {
+    headers: { "Content-Type": "application/json" },
+    ...opts,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw Object.assign(new Error(body.detail || body.error || `HTTP ${res.status}`), { status: res.status, body });
   }
-  return "New Chat";
+  return res.json();
 }
 
-function sortedSessions() {
+// ─── Sidebar rendering ───────────────────────────────────────
+function getDebateName(d) {
+  if (d.customName) return d.customName;
+  const words = (d.proposition || "").trim().split(/\s+/);
+  return words.slice(0, 5).join(" ") + (words.length > 5 ? "…" : "") || "New Debate";
+}
+
+function sortedDebates() {
   const filtered = searchQuery
-    ? sessions.filter(s => getDisplayName(s).toLowerCase().includes(searchQuery.toLowerCase()))
-    : sessions;
+    ? debates.filter(d => getDebateName(d).toLowerCase().includes(searchQuery.toLowerCase()))
+    : debates;
   return [...filtered].sort((a, b) => {
     if (a.pinned && !b.pinned) return -1;
     if (!a.pinned && b.pinned) return 1;
@@ -61,541 +90,558 @@ function sortedSessions() {
   });
 }
 
-function scrollChatToBottom() {
-  chatBox.scrollTop = chatBox.scrollHeight;
-}
-function renderMarkdown(text) {
-  const div = document.createElement("div");
-  div.innerHTML = marked.parse(text || "");
-  return div;
-}
 function renderSidebar() {
-  const list = sortedSessions();
+  const list = sortedDebates();
   sidebarList.innerHTML = "";
 
   if (list.length === 0) {
-    const empty = document.createElement("div");
-    empty.className = "sidebar-empty";
-    empty.textContent = searchQuery ? "No matches" : "No chats yet";
-    sidebarList.appendChild(empty);
+    const el = document.createElement("div");
+    el.className = "sidebar-empty";
+    el.textContent = searchQuery ? "No matches" : "No debates yet";
+    sidebarList.appendChild(el);
     return;
   }
 
-  for (const session of list) {
+  for (const d of list) {
     const item = document.createElement("div");
-    item.className = "session-item" + (session.id === activeSessionId ? " active" : "");
-    item.dataset.id = session.id;
+    item.className = "debate-item" + (d.id === activeDebateId ? " active" : "");
+    item.dataset.id = d.id;
 
-    if (editingSessionId === session.id) {
-
-      const input = document.createElement("input");
-      input.className = "rename-input";
-      input.value = getDisplayName(session);
-      input.addEventListener("click", e => e.stopPropagation());
-      input.addEventListener("blur", () => confirmSidebarRename(session.id, input.value));
-      input.addEventListener("keydown", e => {
-        if (e.key === "Enter") confirmSidebarRename(session.id, input.value);
-        if (e.key === "Escape") { editingSessionId = null; renderSidebar(); }
+    if (editingDebateId === d.id) {
+      const inp = document.createElement("input");
+      inp.className = "rename-input";
+      inp.value = getDebateName(d);
+      inp.addEventListener("click", e => e.stopPropagation());
+      inp.addEventListener("blur", () => confirmSidebarRename(d.id, inp.value));
+      inp.addEventListener("keydown", e => {
+        if (e.key === "Enter") confirmSidebarRename(d.id, inp.value);
+        if (e.key === "Escape") { editingDebateId = null; renderSidebar(); }
       });
-      item.appendChild(input);
-      requestAnimationFrame(() => { input.focus(); input.select(); });
-    } else if (confirmDeleteId === session.id) {
+      item.appendChild(inp);
+      requestAnimationFrame(() => { inp.focus(); inp.select(); });
 
+    } else if (confirmDeleteId === d.id) {
       const nameSpan = document.createElement("span");
-      nameSpan.className = "session-name";
-      nameSpan.textContent = getDisplayName(session);
+      nameSpan.className = "debate-item-name";
+      nameSpan.textContent = getDebateName(d);
       item.appendChild(nameSpan);
 
-      const confirm = document.createElement("div");
-      confirm.className = "delete-confirm";
+      const conf = document.createElement("div");
+      conf.className = "delete-confirm";
 
       const yes = document.createElement("button");
       yes.className = "delete-confirm-yes";
       yes.textContent = "Delete";
-      yes.addEventListener("click", e => { e.stopPropagation(); executeDelete(session.id); });
+      yes.addEventListener("click", e => { e.stopPropagation(); executeDelete(d.id); });
 
       const no = document.createElement("button");
       no.className = "delete-confirm-no";
       no.textContent = "Cancel";
       no.addEventListener("click", e => { e.stopPropagation(); confirmDeleteId = null; renderSidebar(); });
 
-      confirm.appendChild(yes);
-      confirm.appendChild(no);
-      item.appendChild(confirm);
-    } else {
+      conf.append(yes, no);
+      item.append(nameSpan, conf);
 
+    } else {
       const nameSpan = document.createElement("span");
-      nameSpan.className = "session-name";
-      if (session.pinned) {
+      nameSpan.className = "debate-item-name";
+      if (d.pinned) {
         const dot = document.createElement("span");
-        dot.className = "pin-indicator";
+        dot.className = "pin-dot";
         nameSpan.appendChild(dot);
       }
-      nameSpan.appendChild(document.createTextNode(getDisplayName(session)));
+      nameSpan.appendChild(document.createTextNode(getDebateName(d)));
 
       const actions = document.createElement("div");
-      actions.className = "session-actions";
+      actions.className = "item-actions";
 
       const pinBtn = document.createElement("button");
-      pinBtn.className = "session-action-btn";
-      pinBtn.title = session.pinned ? "Unstar" : "Star";
-      pinBtn.innerHTML = session.pinned
-        ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`
-        : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
-      pinBtn.addEventListener("click", e => { e.stopPropagation(); togglePin(session.id); });
+      pinBtn.className = "item-action-btn";
+      pinBtn.title = d.pinned ? "Unstar" : "Star";
+      pinBtn.setAttribute("aria-label", d.pinned ? "Unstar debate" : "Star debate");
+      pinBtn.innerHTML = d.pinned
+        ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`
+        : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+      pinBtn.addEventListener("click", e => { e.stopPropagation(); togglePin(d.id); });
 
       const renameBtn = document.createElement("button");
-      renameBtn.className = "session-action-btn";
+      renameBtn.className = "item-action-btn";
       renameBtn.title = "Rename";
-      renameBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>`;
-      renameBtn.addEventListener("click", e => { e.stopPropagation(); startSidebarRename(session.id); });
+      renameBtn.setAttribute("aria-label", "Rename debate");
+      renameBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>`;
+      renameBtn.addEventListener("click", e => { e.stopPropagation(); startSidebarRename(d.id); });
 
-      const deleteBtn = document.createElement("button");
-      deleteBtn.className = "session-action-btn delete";
-      deleteBtn.title = "Delete";
-      deleteBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
-      deleteBtn.addEventListener("click", e => { e.stopPropagation(); startDelete(session.id); });
+      const delBtn = document.createElement("button");
+      delBtn.className = "item-action-btn danger";
+      delBtn.title = "Delete";
+      delBtn.setAttribute("aria-label", "Delete debate");
+      delBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+      delBtn.addEventListener("click", e => { e.stopPropagation(); confirmDeleteId = d.id; renderSidebar(); });
 
-      actions.append(pinBtn, renameBtn, deleteBtn);
+      actions.append(pinBtn, renameBtn, delBtn);
       item.append(nameSpan, actions);
     }
 
-    item.addEventListener("click", () => switchSession(session.id));
+    item.addEventListener("click", () => switchDebate(d.id));
     sidebarList.appendChild(item);
   }
 }
-function renderHeader() {
-  const activeSession = sessions.find(s => s.id === activeSessionId);
-  if (editingHeader) {
-    chatHeader.style.display = "none";
-    headerInput.style.display = "";
-    exportBtn.style.display = "none";
-  } else {
-    chatHeader.style.display = "";
-    headerInput.style.display = "none";
-    chatHeader.textContent = activeSession ? getDisplayName(activeSession) : "PromptCouncil";
-    exportBtn.style.display = messages.length > 0 && activeSession ? "" : "none";
-  }
-}
-function renderMessages() {
-  chatBox.innerHTML = "";
 
-  if (messages.length === 0) {
-    const welcome = document.createElement("div");
-    welcome.className = "welcome-container";
-    welcome.innerHTML = `<h2>${GREETING}</h2>`;
-    chatBox.appendChild(welcome);
-    renderHeader();
+// ─── Debate view rendering ───────────────────────────────────
+function renderDebateView() {
+  if (!activeDebate) {
+    emptyState.style.display = "";
+    debateView.style.display = "none";
     return;
   }
 
-  for (const msg of messages) {
-    chatBox.appendChild(createMessageEl(msg));
-  }
+  emptyState.style.display = "none";
+  debateView.style.display = "";
 
-  if (loading) {
-    const loadingEl = document.createElement("div");
-    loadingEl.className = "message-wrapper assistant";
-    const avatar = document.createElement("div");
-    avatar.className = "avatar";
-    avatar.textContent = models.find(m => m.id === selectedModel)?.name || "AI";
-    const bubble = document.createElement("div");
-    bubble.className = "message-bubble";
-    bubble.innerHTML = `<div class="typing-indicator"><span></span><span></span><span></span></div>`;
-    loadingEl.append(avatar, bubble);
-    chatBox.appendChild(loadingEl);
-  }
+  const d = activeDebate;
+  debateStatusBadge.textContent = d.status.replace(/_/g, " ");
+  debateStatusBadge.className = `debate-status-badge ${d.status}`;
+  debateRoundIndicator.textContent = `Round ${d.currentRound} / ${d.maxRounds}`;
+  debateProposition.textContent = d.proposition;
+  debateProposition.title = d.proposition;
 
-  renderHeader();
-  scrollChatToBottom();
+  factionAStance.textContent = `"${d.factionA.stance}"`;
+  factionBStance.textContent = `"${d.factionB.stance}"`;
+
+  // faction model chips
+  renderFactionChips(factionAModels, d.factionA.models, "a");
+  renderFactionChips(factionBModels, d.factionB.models, "b");
+
+  // control bar
+  renderControlBar(d.status);
+
+  // transcript
+  renderTranscript(d);
 }
 
-function createMessageEl(msg) {
-  const wrapper = document.createElement("div");
-  wrapper.className = `message-wrapper ${msg.role}`;
+function renderFactionChips(container, modelIds, faction) {
+  container.innerHTML = "";
+  for (const mid of modelIds) {
+    const m = models.find(x => x.id === mid);
+    const chip = document.createElement("span");
+    chip.className = "model-chip-display";
+    chip.textContent = m ? m.name : mid;
+    container.appendChild(chip);
+  }
+}
 
-  const avatar = document.createElement("div");
-  avatar.className = "avatar";
-  avatar.textContent = msg.role === "user" ? "You" : (msg.modelName || "AI");
+function renderControlBar(status) {
+  advanceBtn.className = "advance-btn";
+  advanceBtn.disabled = false;
 
-  const bubble = document.createElement("div");
-  bubble.className = "message-bubble";
+  if (status === "active" && !advancing) {
+    advanceBtn.textContent = "Advance Turn";
+    advanceBtn.disabled = false;
+  } else if (status === "turn_in_progress" || advancing) {
+    advanceBtn.innerHTML = `Working <span class="typing-dots"><span></span><span></span><span></span></span>`;
+    advanceBtn.disabled = true;
+  } else if (status === "error") {
+    advanceBtn.className = "advance-btn error";
+    advanceBtn.textContent = "Retry Turn";
+    advanceBtn.disabled = false;
+  } else if (status === "concluded") {
+    advanceBtn.className = "advance-btn concluded";
+    advanceBtn.textContent = "Debate Concluded";
+    advanceBtn.disabled = true;
+  } else {
+    advanceBtn.disabled = true;
+  }
+}
 
-  if (msg.thinking) {
-    const thinkingBox = document.createElement("div");
-    thinkingBox.className = "thinking-box";
+function renderTranscript(d) {
+  const transcript = d.publicTranscript || [];
+  const aPrivate = d.factionAPrivate || { teamMessages: [], thinking: [] };
+  const bPrivate = d.factionBPrivate || { teamMessages: [], thinking: [] };
+
+  factionATurns.innerHTML = "";
+  factionBTurns.innerHTML = "";
+
+  const maxRound = Math.max(0, ...transcript.map(m => m.round));
+  const seenRoundsA = new Set();
+  const seenRoundsB = new Set();
+
+  for (const msg of transcript) {
+    const isA = msg.faction === "A";
+    const container = isA ? factionATurns : factionBTurns;
+    const seenRounds = isA ? seenRoundsA : seenRoundsB;
+
+    if (!seenRounds.has(msg.round)) {
+      seenRounds.add(msg.round);
+      if (seenRounds.size > 1 || msg.round > 1) {
+        const sep = document.createElement("div");
+        sep.className = "round-separator";
+        sep.textContent = `Round ${msg.round}`;
+        container.appendChild(sep);
+      }
+    }
+
+    const modelName = getModelName(msg.modelId);
+    const privateData = isA ? aPrivate : bPrivate;
+    const teamMsgEntry = privateData.teamMessages?.find(t => t.round === msg.round && t.modelId === msg.modelId);
+    const thinkingEntry = privateData.thinking?.find(t => t.round === msg.round && t.modelId === msg.modelId);
+
+    container.appendChild(createTurnCard(msg, modelName, teamMsgEntry, thinkingEntry));
+  }
+
+  // add thinking placeholders if still advancing
+  if (advancing) {
+    const placeholder = document.createElement("div");
+    placeholder.className = "turn-card";
+    placeholder.innerHTML = `<div class="turn-card-header"><span class="turn-model-name" style="color:var(--text-muted)">Thinking…</span></div><div class="turn-card-argument"><span class="typing-dots"><span></span><span></span><span></span></span></div>`;
+    (activeDebate.factionA ? factionATurns : factionBTurns).appendChild(placeholder);
+  }
+
+  // auto-scroll both to bottom
+  factionATurns.scrollTop = factionATurns.scrollHeight;
+  factionBTurns.scrollTop = factionBTurns.scrollHeight;
+}
+
+function getModelName(modelId) {
+  const m = models.find(x => x.id === modelId);
+  return m ? m.name : modelId;
+}
+
+function createTurnCard(msg, modelName, teamMsgEntry, thinkingEntry) {
+  const card = document.createElement("div");
+  card.className = "turn-card";
+
+  const header = document.createElement("div");
+  header.className = "turn-card-header";
+
+  const nameEl = document.createElement("span");
+  nameEl.className = "turn-model-name";
+  nameEl.textContent = modelName;
+
+  const roundBadge = document.createElement("span");
+  roundBadge.className = "turn-round-badge";
+  roundBadge.textContent = `R${msg.round}`;
+
+  header.append(nameEl, roundBadge);
+  card.appendChild(header);
+
+  const argEl = document.createElement("div");
+  argEl.className = "turn-card-argument";
+  argEl.innerHTML = marked.parse(msg.argument || "");
+  card.appendChild(argEl);
+
+  // team message (collapsible)
+  if (teamMsgEntry?.teamMessage) {
     const details = document.createElement("details");
+    details.className = "collapsible-block";
     const summary = document.createElement("summary");
-    summary.textContent = "Thought Process";
-    details.appendChild(summary);
-    details.appendChild(renderMarkdown(msg.thinking));
-    thinkingBox.appendChild(details);
-    bubble.appendChild(thinkingBox);
+    summary.textContent = "Team message";
+    const content = document.createElement("div");
+    content.className = "collapsible-content";
+    content.innerHTML = marked.parse(teamMsgEntry.teamMessage);
+    details.append(summary, content);
+    card.appendChild(details);
   }
 
-  if (msg.role === "assistant") {
-    bubble.appendChild(renderMarkdown(msg.text));
-  } else {
-    bubble.appendChild(document.createTextNode(msg.text));
+  // thinking (collapsible)
+  if (thinkingEntry?.thinking) {
+    const details = document.createElement("details");
+    details.className = "collapsible-block";
+    const summary = document.createElement("summary");
+    summary.textContent = "Thinking";
+    const content = document.createElement("div");
+    content.className = "collapsible-content";
+    content.innerHTML = marked.parse(thinkingEntry.thinking);
+    details.append(summary, content);
+    card.appendChild(details);
   }
 
-  wrapper.append(avatar, bubble);
-  return wrapper;
-}
-function renderModelSelector() {
-  modelSelector.innerHTML = "";
-  if (modelsLoading) {
-    const span = document.createElement("span");
-    span.className = "model-loading";
-    span.textContent = "Loading models…";
-    modelSelector.appendChild(span);
-    return;
-  }
-  if (models.length === 0) {
-    const span = document.createElement("span");
-    span.className = "model-loading";
-    span.textContent = "No models available";
-    modelSelector.appendChild(span);
-    return;
-  }
-  for (const m of models) {
-    const btn = document.createElement("button");
-    btn.className = "model-chip" + (selectedModel === m.id ? " active" : "");
-    btn.textContent = m.name;
-    btn.title = `Switch to ${m.name}`;
-    btn.addEventListener("click", () => {
-      selectedModel = m.id;
-      renderModelSelector();
-      updateSendState();
-    });
-    modelSelector.appendChild(btn);
-  }
+  return card;
 }
 
-function updateSendState() {
-  sendBtn.disabled = loading || !textarea.value.trim() || !selectedModel;
-  textarea.disabled = !selectedModel;
-  textarea.placeholder = selectedModel
-    ? `Message ${models.find(m => m.id === selectedModel)?.name || "AI"}...`
-    : "Select a model first...";
+// ─── Moderator log ───────────────────────────────────────────
+function log(message, type = "info") {
+  const el = document.createElement("span");
+  el.className = `log-entry ${type}`;
+  el.textContent = message;
+  moderatorLogInner.appendChild(el);
+  moderatorLogInner.scrollLeft = moderatorLogInner.scrollWidth;
 }
-function render() {
-  renderSidebar();
-  renderHeader();
-  renderMessages();
-  renderModelSelector();
-  updateSendState();
-}
-async function fetchSessions() {
-  const res = await fetch(`${API_BASE}/sessions`);
-  sessions = await res.json();
+
+// ─── Data fetching ────────────────────────────────────────────
+async function fetchDebates() {
+  debates = await api("/debates");
 }
 
 async function fetchModels() {
   try {
-    const res = await fetch(`${API_BASE}/models`);
-    models = await res.json();
-    if (models.length > 0) selectedModel = models[0].id;
+    models = await api("/models");
   } catch {
     models = [];
-  } finally {
-    modelsLoading = false;
   }
 }
 
-async function fetchMessages(sessionId) {
-  const res = await fetch(`${API_BASE}/sessions/${sessionId}`);
-  const data = await res.json();
-  messages = data.messages || [];
-}
-async function createNewSession() {
-  try {
-    const res = await fetch(`${API_BASE}/sessions`, { method: "POST" });
-    const newSession = await res.json();
-    sessions = [{ ...newSession, messageCount: 0, preview: null }, ...sessions];
-    activeSessionId = newSession.id;
-    messages = [];
-    renderSidebar();
-    renderHeader();
-    renderMessages();
-  } catch (err) {
-    console.error("Failed to create session:", err);
-  }
+async function loadDebate(id) {
+  const d = await api(`/debates/${id}`);
+  activeDebate = d;
+  const i = debates.findIndex(x => x.id === id);
+  if (i >= 0) debates[i] = { ...debates[i], ...d };
 }
 
-function switchSession(id) {
-  if (id === activeSessionId) return;
-  activeSessionId = id;
-  editingHeader = false;
-  messages = [];
+// ─── Debate actions ───────────────────────────────────────────
+async function switchDebate(id) {
+  if (id === activeDebateId) return;
+  activeDebateId = id;
+  activeDebate = null;
   renderSidebar();
-  renderHeader();
-  renderMessages();
-  fetchMessages(id).then(() => renderMessages()).catch(console.error);
-
-  if (window.innerWidth <= 768) {
-    sidebarOpen = false;
-    sidebar.classList.remove("open");
-    sidebarOverlay.style.display = "none";
+  renderDebateView();
+  try {
+    await loadDebate(id);
+    renderDebateView();
+  } catch (err) {
+    log(`Failed to load debate: ${err.message}`, "error");
   }
+  if (window.innerWidth < 768) closeSidebar();
 }
 
 async function togglePin(id) {
-  const session = sessions.find(s => s.id === id);
-  if (!session) return;
+  const d = debates.find(x => x.id === id);
+  if (!d) return;
   try {
-    await fetch(`${API_BASE}/sessions/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pinned: !session.pinned }),
-    });
-    session.pinned = !session.pinned;
+    await api(`/debates/${id}`, { method: "PATCH", body: JSON.stringify({ pinned: !d.pinned }) });
+    d.pinned = !d.pinned;
     renderSidebar();
   } catch (err) {
-    console.error("Failed to toggle pin:", err);
+    console.error("Failed to pin:", err);
   }
 }
 
-function startSidebarRename(id) {
-  editingSessionId = id;
-  renderSidebar();
-}
+function startSidebarRename(id) { editingDebateId = id; renderSidebar(); }
 
 async function confirmSidebarRename(id, newName) {
-  editingSessionId = null;
+  editingDebateId = null;
   try {
-    await fetch(`${API_BASE}/sessions/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ customName: newName.trim() || null }),
-    });
-    const s = sessions.find(s => s.id === id);
-    if (s) s.customName = newName.trim() || null;
+    const trimmed = newName.trim() || null;
+    await api(`/debates/${id}`, { method: "PATCH", body: JSON.stringify({ customName: trimmed }) });
+    const d = debates.find(x => x.id === id);
+    if (d) d.customName = trimmed;
+    if (activeDebate?.id === id) activeDebate.customName = trimmed;
   } catch (err) {
-    console.error("Failed to rename session:", err);
+    console.error("Failed to rename:", err);
   }
-  renderSidebar();
-  renderHeader();
-}
-
-function startDelete(id) {
-  confirmDeleteId = id;
   renderSidebar();
 }
 
 async function executeDelete(id) {
   confirmDeleteId = null;
   try {
-    await fetch(`${API_BASE}/sessions/${id}`, { method: "DELETE" });
-    const prevActive = activeSessionId === id;
-    sessions = sessions.filter(s => s.id !== id);
-    if (prevActive) {
-      const sorted = sortedSessions();
-      activeSessionId = sorted.length > 0 ? sorted[0].id : null;
-      messages = [];
-      if (activeSessionId) {
-        fetchMessages(activeSessionId).then(() => renderMessages()).catch(console.error);
+    await api(`/debates/${id}`, { method: "DELETE" });
+    const wasActive = activeDebateId === id;
+    debates = debates.filter(x => x.id !== id);
+    if (wasActive) {
+      const first = sortedDebates()[0];
+      activeDebateId = first?.id || null;
+      activeDebate = null;
+      if (activeDebateId) {
+        await loadDebate(activeDebateId);
       }
     }
     renderSidebar();
-    renderHeader();
-    renderMessages();
+    renderDebateView();
   } catch (err) {
-    console.error("Failed to delete session:", err);
+    console.error("Failed to delete:", err);
   }
 }
 
-function startHeaderRename() {
-  const activeSession = sessions.find(s => s.id === activeSessionId);
-  if (!activeSession) return;
-  editingHeader = true;
-  headerInput.value = getDisplayName(activeSession);
-  renderHeader();
-  requestAnimationFrame(() => { headerInput.focus(); headerInput.select(); });
-}
+async function advanceTurn() {
+  if (!activeDebate || advancing) return;
+  const isRetry = activeDebate.status === "error";
+  const endpoint = isRetry ? `/debates/${activeDebateId}/retry-turn` : `/debates/${activeDebateId}/turn`;
 
-async function confirmHeaderRename() {
-  const activeSession = sessions.find(s => s.id === activeSessionId);
-  if (activeSession) {
-    const newName = headerInput.value.trim() || null;
-    try {
-      await fetch(`${API_BASE}/sessions/${activeSessionId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ customName: newName }),
-      });
-      activeSession.customName = newName;
-    } catch (err) {
-      console.error("Failed to rename session:", err);
-    }
-  }
-  editingHeader = false;
-  renderSidebar();
-  renderHeader();
-}
-async function sendMessage() {
-  const text = textarea.value.trim();
-
-  if (!text || !selectedModel || loading) return;
-
-  const userMessage = text;
-  textarea.value = "";
-  textarea.style.height = "auto";
-  loading = true;
-
-  messages = [...messages, { role: "user", text: userMessage }];
-  renderMessages();
-  updateSendState();
+  advancing = true;
+  renderControlBar(activeDebate.status);
+  log(isRetry ? "Retrying last turn…" : `Round ${activeDebate.currentRound} — requesting next speaker…`);
 
   try {
-    const res = await fetch(`${API_BASE}/chat`, {
+    const result = await api(endpoint, { method: "POST" });
+    log(`${getModelName(result.message.modelId)} (Faction ${result.message.faction}) spoke.`, "info");
+    if (result.status === "concluded") log("Debate concluded.", "concluded");
+    if (!result.message.parseOk) log("Warning: model didn't follow XML format, used fallback.", "warn");
+
+    await loadDebate(activeDebateId);
+    renderDebateView();
+  } catch (err) {
+    log(`Turn failed: ${err.message}`, "error");
+    // reload to get error status from server
+    try { await loadDebate(activeDebateId); renderDebateView(); } catch {}
+  } finally {
+    advancing = false;
+    if (activeDebate) renderControlBar(activeDebate.status);
+  }
+}
+
+// ─── Create debate modal ──────────────────────────────────────
+let selectedA = [];
+let selectedB = [];
+
+function openCreateModal() {
+  selectedA = [];
+  selectedB = [];
+  propositionInput.value = "";
+  factionAStanceInput.value = "for";
+  factionBStanceInput.value = "against";
+  maxRoundsInput.value = "6";
+  renderPickers();
+  createModal.style.display = "flex";
+  requestAnimationFrame(() => propositionInput.focus());
+}
+
+function closeCreateModal() { createModal.style.display = "none"; }
+
+function renderPickers() {
+  renderPicker(factionAPicker, selectedA, "A");
+  renderPicker(factionBPicker, selectedB, "B");
+}
+
+function renderPicker(container, selected, faction) {
+  container.innerHTML = "";
+  for (const m of models) {
+    const btn = document.createElement("button");
+    btn.className = "model-pick-btn" + (selected.includes(m.id) ? " selected" : "");
+    btn.textContent = m.name;
+    btn.type = "button";
+    btn.addEventListener("click", () => {
+      if (faction === "A") {
+        selectedA = toggleInArray(selectedA, m.id);
+      } else {
+        selectedB = toggleInArray(selectedB, m.id);
+      }
+      renderPickers();
+    });
+    container.appendChild(btn);
+  }
+}
+
+function toggleInArray(arr, val) {
+  return arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val];
+}
+
+async function submitCreateDebate() {
+  const proposition = propositionInput.value.trim();
+  if (!proposition) { propositionInput.focus(); return; }
+  if (selectedA.length === 0 || selectedB.length === 0) {
+    alert("Pick at least one model for each faction.");
+    return;
+  }
+
+  modalSubmit.disabled = true;
+  modalSubmit.textContent = "Starting…";
+
+  try {
+    const d = await api("/debates", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        sessionId: activeSessionId,
-        message: userMessage,
-        modelId: selectedModel,
+        proposition,
+        factionA: { models: selectedA, stance: factionAStanceInput.value.trim() || "for" },
+        factionB: { models: selectedB, stance: factionBStanceInput.value.trim() || "against" },
+        maxRounds: parseInt(maxRoundsInput.value, 10) || 6,
       }),
     });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.detail || data.error || `HTTP ${res.status}`);
-    }
-
-    if (!activeSessionId && data.sessionId) {
-      activeSessionId = data.sessionId;
-
-      await fetchSessions();
-    }
-
-    const assistantMsg = {
-      role: "assistant",
-      text: data.reply,
-      thinking: data.thinking,
-      modelName: data.modelName,
-    };
-    messages = [...messages, assistantMsg];
-
-    const s = sessions.find(s => s.id === (data.sessionId || activeSessionId));
-    if (s) {
-      s.preview = userMessage;
-      s.messageCount = (s.messageCount || 0) + 2;
-      s.updatedAt = Date.now();
-    }
-
+    debates = [d, ...debates];
+    closeCreateModal();
+    await switchDebate(d.id);
+    log(`Debate started: "${d.proposition.slice(0, 50)}${d.proposition.length > 50 ? "…" : ""}"`);
   } catch (err) {
-    console.error("Failed to send message:", err);
-    messages = [...messages, {
-      role: "assistant",
-      text: `Connection error: ${err.message}`,
-      modelName: models.find(m => m.id === selectedModel)?.name || "AI",
-    }];
+    alert(`Failed to create debate: ${err.message}`);
   } finally {
-    loading = false;
+    modalSubmit.disabled = false;
+    modalSubmit.textContent = "Start Debate";
+  }
+}
+
+// ─── Rename modal (header button) ────────────────────────────
+function openRenameModal() {
+  if (!activeDebate) return;
+  renameInput.value = activeDebate.customName || "";
+  renameModal.style.display = "flex";
+  requestAnimationFrame(() => { renameInput.focus(); renameInput.select(); });
+}
+
+function closeRenameModal() { renameModal.style.display = "none"; }
+
+async function submitRename() {
+  if (!activeDebate) return;
+  const newName = renameInput.value.trim() || null;
+  try {
+    await api(`/debates/${activeDebateId}`, { method: "PATCH", body: JSON.stringify({ customName: newName }) });
+    activeDebate.customName = newName;
+    const d = debates.find(x => x.id === activeDebateId);
+    if (d) d.customName = newName;
     renderSidebar();
-    renderMessages();
-    updateSendState();
-    textarea.focus();
+  } catch (err) {
+    console.error("Failed to rename:", err);
   }
+  closeRenameModal();
 }
-function exportConversation() {
-  const activeSession = sessions.find(s => s.id === activeSessionId);
-  const title = activeSession ? getDisplayName(activeSession) : "PromptCouncil Chat";
-  const date = new Date().toISOString().split("T")[0];
 
-  let md = `# ${title}\n\n_Exported ${date}_\n\n---\n\n`;
-  for (const msg of messages) {
-    const label = msg.role === "user" ? "**You**" : `**${msg.modelName || "AI"}**`;
-    if (msg.thinking) {
-      md += `${label} *(thinking)*\n\n${msg.thinking}\n\n---\n\n`;
-    }
-    md += `${label}\n\n${msg.text}\n\n---\n\n`;
-  }
+// ─── Sidebar open/close helpers ───────────────────────────────
+function openSidebar() { sidebarOpen = true; sidebar.classList.add("open"); sidebarOverlay.style.display = ""; }
+function closeSidebar() { sidebarOpen = false; sidebar.classList.remove("open"); sidebarOverlay.style.display = "none"; }
 
-  const blob = new Blob([md], { type: "text/markdown" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${title.replace(/[^a-z0-9]/gi, "_").toLowerCase()}_${date}.md`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-sidebarToggle.addEventListener("click", () => {
-  sidebarOpen = !sidebarOpen;
-  sidebar.classList.toggle("open", sidebarOpen);
-  sidebarOverlay.style.display = "";
+// ─── Event wiring ─────────────────────────────────────────────
+sidebarToggle.addEventListener("click", () => { sidebarOpen ? closeSidebar() : openSidebar(); });
+sidebarOverlay.addEventListener("click", closeSidebar);
+mobileToggle.addEventListener("click", openSidebar);
+
+newDebateBtn.addEventListener("click", openCreateModal);
+emptyNewBtn.addEventListener("click", openCreateModal);
+
+sidebarSearch.addEventListener("input", e => { searchQuery = e.target.value; renderSidebar(); });
+
+advanceBtn.addEventListener("click", advanceTurn);
+headerRenameBtn.addEventListener("click", openRenameModal);
+
+modalClose.addEventListener("click", closeCreateModal);
+modalCancel.addEventListener("click", closeCreateModal);
+modalSubmit.addEventListener("click", submitCreateDebate);
+
+renameModalClose.addEventListener("click", closeRenameModal);
+renameCancel.addEventListener("click", closeRenameModal);
+renameSubmit.addEventListener("click", submitRename);
+
+renameInput.addEventListener("keydown", e => {
+  if (e.key === "Enter") submitRename();
+  if (e.key === "Escape") closeRenameModal();
 });
 
-sidebarOverlay.addEventListener("click", () => {
-  sidebarOpen = false;
-  sidebar.classList.remove("open");
-  sidebarOverlay.style.display = "none";
-});
+createModal.addEventListener("click", e => { if (e.target === createModal) closeCreateModal(); });
+renameModal.addEventListener("click", e => { if (e.target === renameModal) closeRenameModal(); });
 
-mobileToggle.addEventListener("click", () => {
-  sidebarOpen = true;
-  sidebar.classList.add("open");
-  sidebarOverlay.style.display = "";
+propositionInput.addEventListener("keydown", e => {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) submitCreateDebate();
 });
-
-newChatBtn.addEventListener("click", createNewSession);
 
 document.addEventListener("keydown", e => {
-  if ((e.ctrlKey || e.metaKey) && e.key === "n") {
-    e.preventDefault();
-    createNewSession();
-  }
+  if ((e.ctrlKey || e.metaKey) && e.key === "n") { e.preventDefault(); openCreateModal(); }
+  if (e.key === "Escape") { closeCreateModal(); closeRenameModal(); }
 });
 
-chatHeader.addEventListener("dblclick", startHeaderRename);
-
-headerInput.addEventListener("blur", confirmHeaderRename);
-headerInput.addEventListener("keydown", e => {
-  if (e.key === "Enter") confirmHeaderRename();
-  if (e.key === "Escape") { editingHeader = false; renderHeader(); }
-});
-
-exportBtn.addEventListener("click", exportConversation);
-
-sidebarSearch.addEventListener("input", e => {
-  searchQuery = e.target.value;
-  renderSidebar();
-});
-
-textarea.addEventListener("input", () => {
-  textarea.style.height = "auto";
-  textarea.style.height = Math.min(textarea.scrollHeight, 150) + "px";
-  updateSendState();
-});
-
-textarea.addEventListener("keydown", e => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
-  }
-});
-
-sendBtn.addEventListener("click", sendMessage);
+// ─── Init ─────────────────────────────────────────────────────
 async function init() {
+  await Promise.all([fetchDebates(), fetchModels()]);
 
-  renderModelSelector();
   renderSidebar();
+  renderPickers();
 
-  await Promise.all([
-    fetchSessions().then(() => {
-      if (sessions.length > 0) {
-        activeSessionId = sessions[0].id;
-        return fetchMessages(activeSessionId);
-      }
-    }),
-    fetchModels(),
-  ]);
+  if (debates.length > 0) {
+    activeDebateId = sortedDebates()[0].id;
+    try {
+      await loadDebate(activeDebateId);
+    } catch (err) {
+      console.error("Failed to load first debate:", err);
+    }
+  }
 
-  render();
+  renderDebateView();
 }
 
 init().catch(console.error);
-
-
