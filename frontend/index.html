@@ -3,31 +3,34 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PromptCouncil</title>
-  <meta name="description" content="PromptCouncil — self-hosted multi-model AI chat. Talk to Claude, GPT, Gemini, and local Ollama models from one interface." />
-  <meta property="og:title" content="PromptCouncil" />
-  <meta property="og:description" content="Self-hosted multi-model AI chat interface." />
+  <title>DebateItOut</title>
+  <meta name="description" content="DebateItOut — self-hosted multi-model AI debate engine. Watch Claude, GPT, Gemini and local models argue both sides of any proposition." />
+  <meta property="og:title" content="DebateItOut" />
+  <meta property="og:description" content="Multi-model AI debate orchestrator with faction-level context isolation." />
 
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/marked@13/marked.min.js"></script>
-
   <link rel="stylesheet" href="./app.css" />
 </head>
 <body>
   <div id="app">
     <div class="app-layout">
 
+      <!-- Sidebar -->
       <aside class="sidebar" id="sidebar">
         <div class="sidebar-inner">
           <div class="sidebar-header">
-            <button class="sidebar-toggle" id="sidebar-toggle" title="Toggle sidebar">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <button class="sidebar-toggle" id="sidebar-toggle" title="Toggle sidebar" aria-label="Toggle sidebar">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="3" y="3" width="18" height="18" rx="3"/>
                 <line x1="9" y1="3" x2="9" y2="21"/>
               </svg>
             </button>
-            <span class="sidebar-title">Chats</span>
-            <button class="new-chat-btn" id="new-chat-btn" title="New chat (Ctrl+N)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <span class="sidebar-title">Debates</span>
+            <button class="new-debate-btn" id="new-debate-btn" title="New debate (Ctrl+N)" aria-label="New debate">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
                 <line x1="12" y1="5" x2="12" y2="19"/>
                 <line x1="5" y1="12" x2="19" y2="12"/>
               </svg>
@@ -35,7 +38,7 @@
           </div>
 
           <div class="sidebar-search">
-            <input type="search" id="sidebar-search" placeholder="Search chats..." autocomplete="off" />
+            <input type="search" id="sidebar-search" placeholder="Search debates…" autocomplete="off" />
           </div>
 
           <div class="sidebar-list" id="sidebar-list"></div>
@@ -45,51 +48,170 @@
       <div class="sidebar-overlay" id="sidebar-overlay" style="display:none"></div>
 
       <button class="mobile-toggle" id="mobile-toggle" aria-label="Open sidebar">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
           <line x1="4" y1="6" x2="20" y2="6"/>
           <line x1="4" y1="12" x2="20" y2="12"/>
           <line x1="4" y1="18" x2="20" y2="18"/>
         </svg>
       </button>
 
-      <div class="app-container">
+      <!-- Main content -->
+      <div class="app-container" id="app-container">
 
-        <div class="chat-header">
-          <span class="chat-header-title" id="chat-header-title" title="Double-click to rename">
-            PromptCouncil
-          </span>
-          <input class="header-rename-input" id="header-rename-input" style="display:none" autocomplete="off" />
-          <button class="export-btn" id="export-btn" style="display:none" title="Export conversation as Markdown">
-            Export
-          </button>
+        <!-- Empty state -->
+        <div class="empty-state" id="empty-state">
+          <div class="empty-state-inner">
+            <div class="empty-logo">
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                <rect x="4" y="8" width="18" height="32" rx="4" fill="oklch(72% 0.16 52 / 0.2)" stroke="oklch(72% 0.16 52 / 0.6)" stroke-width="1.5"/>
+                <rect x="26" y="8" width="18" height="32" rx="4" fill="oklch(68% 0.14 220 / 0.2)" stroke="oklch(68% 0.14 220 / 0.6)" stroke-width="1.5"/>
+                <line x1="24" y1="8" x2="24" y2="40" stroke="oklch(58% 0.01 250 / 0.4)" stroke-width="1" stroke-dasharray="3 3"/>
+              </svg>
+            </div>
+            <h1 class="empty-title">DebateItOut</h1>
+            <p class="empty-sub">Set a proposition. Pick your factions. Let the models argue.</p>
+            <button class="btn-primary" id="empty-new-btn">New Debate</button>
+          </div>
         </div>
 
-        <div class="chat-box" id="chat-box">
+        <!-- Active debate view (hidden until a debate is loaded) -->
+        <div class="debate-view" id="debate-view" style="display:none">
 
-        </div>
-
-        <div class="input-container">
-          <div class="input-top-row">
-            <div class="model-selector" id="model-selector">
-
+          <!-- Proposition header -->
+          <div class="debate-header" id="debate-header">
+            <div class="debate-header-left">
+              <span class="debate-status-badge" id="debate-status-badge">active</span>
+              <span class="debate-round-indicator" id="debate-round-indicator">Round 1 / 6</span>
+            </div>
+            <div class="debate-proposition" id="debate-proposition"></div>
+            <div class="debate-header-right">
+              <button class="header-rename-btn" id="header-rename-btn" title="Rename debate" aria-label="Rename debate">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                </svg>
+              </button>
             </div>
           </div>
-          <div class="input-wrapper">
-            <textarea
-              class="input-field"
-              id="input-field"
-              rows="1"
-              placeholder="Select a model first..."
-              autocomplete="off"
-            ></textarea>
-            <button class="send-button" id="send-button" disabled>
-              <svg class="send-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-              </svg>
-            </button>
+
+          <!-- Moderator log strip -->
+          <div class="moderator-log" id="moderator-log">
+            <div class="moderator-log-inner" id="moderator-log-inner"></div>
+          </div>
+
+          <!-- Faction columns -->
+          <div class="debate-area" id="debate-area">
+            <div class="faction-column faction-a" id="faction-a-col">
+              <div class="faction-header">
+                <span class="faction-label faction-a-label">Faction A</span>
+                <span class="faction-stance" id="faction-a-stance"></span>
+              </div>
+              <div class="faction-models" id="faction-a-models"></div>
+              <div class="faction-turns" id="faction-a-turns"></div>
+            </div>
+
+            <div class="faction-column faction-b" id="faction-b-col">
+              <div class="faction-header">
+                <span class="faction-label faction-b-label">Faction B</span>
+                <span class="faction-stance" id="faction-b-stance"></span>
+              </div>
+              <div class="faction-models" id="faction-b-models"></div>
+              <div class="faction-turns" id="faction-b-turns"></div>
+            </div>
+          </div>
+
+          <!-- Control bar -->
+          <div class="control-bar" id="control-bar">
+            <button class="advance-btn" id="advance-btn">Advance Turn</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create debate modal -->
+  <div class="modal-overlay" id="create-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modal-title">New Debate</h2>
+        <button class="modal-close" id="modal-close" aria-label="Close modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="proposition-input">Proposition</label>
+          <textarea class="form-textarea" id="proposition-input" rows="3" placeholder="e.g. AI will replace most knowledge work within 10 years" maxlength="2000"></textarea>
+        </div>
+
+        <div class="faction-builder-row">
+          <!-- Faction A -->
+          <div class="faction-builder faction-a-builder">
+            <div class="faction-builder-header">
+              <span class="faction-label faction-a-label">Faction A</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="faction-a-stance">Stance</label>
+              <input class="form-input" id="faction-a-stance-input" type="text" placeholder="for" value="for" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Models</label>
+              <div class="model-picker" id="faction-a-picker" data-faction="A"></div>
+            </div>
+          </div>
+
+          <div class="vs-divider">VS</div>
+
+          <!-- Faction B -->
+          <div class="faction-builder faction-b-builder">
+            <div class="faction-builder-header">
+              <span class="faction-label faction-b-label">Faction B</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="faction-b-stance">Stance</label>
+              <input class="form-input" id="faction-b-stance-input" type="text" placeholder="against" value="against" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Models</label>
+              <div class="model-picker" id="faction-b-picker" data-faction="B"></div>
+            </div>
           </div>
         </div>
 
+        <div class="form-group form-group-inline">
+          <label class="form-label" for="max-rounds-input">Rounds</label>
+          <input class="form-input form-input-sm" id="max-rounds-input" type="number" min="1" max="20" value="6" />
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-ghost" id="modal-cancel">Cancel</button>
+        <button class="btn-primary" id="modal-submit">Start Debate</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Inline rename modal -->
+  <div class="modal-overlay" id="rename-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="rename-title">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2 class="modal-title" id="rename-title">Rename Debate</h2>
+        <button class="modal-close" id="rename-modal-close" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input class="form-input" id="rename-input" type="text" placeholder="Custom name…" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost" id="rename-cancel">Cancel</button>
+        <button class="btn-primary" id="rename-submit">Save</button>
       </div>
     </div>
   </div>
@@ -97,4 +219,3 @@
   <script src="./app.js"></script>
 </body>
 </html>
-
