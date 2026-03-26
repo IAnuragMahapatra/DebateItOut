@@ -4,9 +4,9 @@ import json
 
 import httpx
 
-# model dispatch ported from PromptCouncil
-# key difference: takes pre-assembled system + messages from the caller
-# context assembly is the moderator's job, not ours
+# model dispatch layer
+# takes pre-assembled system + messages from the caller
+# context assembly is moderator.py's job
 
 HTTP_TIMEOUT = httpx.Timeout(120.0)
 
