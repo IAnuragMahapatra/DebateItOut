@@ -134,8 +134,9 @@ def assemble_context(
     # merge consecutive same-role entries (required for Anthropic)
     merged = _merge_roles(raw)
 
-    # Anthropic requires the conversation to start with a user message
-    if merged and merged[0]["role"] == "assistant":
+    # Anthropic requires the conversation to start with a user message;
+    # also inject one when there's no history at all (first turn)
+    if not merged or merged[0]["role"] == "assistant":
         merged.insert(0, {"role": "user", "content": "[Debate started. Make your opening argument.]"})
 
     all_text = system + "".join(m["content"] for m in merged)
