@@ -11,16 +11,8 @@
   --text-main:       oklch(95% 0.01 60);
   --text-muted:      oklch(60% 0.02 60);
 
-  /* Faction A — amber */
-  --fa:              oklch(45% 0.1 260);
-  --fa-subtle:       oklch(45% 0.1 260 / 0.12);
-  --fa-border:       oklch(45% 0.1 260 / 0.30);
-
-  /* Faction B — blue */
-  --fb:              oklch(45% 0.15 40);
-  --fb-subtle:       oklch(45% 0.15 40 / 0.12);
-  --fb-border:       oklch(45% 0.15 40 / 0.30);
-
+  /* Faction colors are scoped to their respective columns */
+  
   /* Motion */
   --ease-out:    cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
@@ -526,8 +518,18 @@ body {
   min-height: 0;
 }
 
-.faction-a { border-top: 1px solid var(--fa); }
-.faction-b { border-top: 1px solid var(--fb); }
+.faction-a { 
+  --faction-color: oklch(45% 0.1 260); /* Cobalt */
+  --faction-subtle: oklch(45% 0.1 260 / 0.12);
+  --faction-border: oklch(45% 0.1 260 / 0.30);
+  border-top: 1px solid var(--faction-color); 
+}
+.faction-b { 
+  --faction-color: oklch(45% 0.15 40); /* Sienna */
+  --faction-subtle: oklch(45% 0.15 40 / 0.12);
+  --faction-border: oklch(45% 0.15 40 / 0.30);
+  border-top: 1px solid var(--faction-color); 
+}
 
 .faction-column:last-child { border-right: none; }
 
@@ -546,10 +548,8 @@ body {
   font-weight: 900;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  color: var(--faction-color);
 }
-
-.faction-a-label { color: var(--fa); }
-.faction-b-label { color: var(--fb); }
 
 .faction-stance {
   font-size: 0.8rem;
@@ -617,11 +617,9 @@ body {
   border-radius: 0;
   overflow: hidden;
   border: 1px solid var(--border);
+  border-top: 1px solid var(--faction-border);
   flex-shrink: 0;
 }
-
-.faction-a .turn-card { border-top: 1px solid var(--fa-border); }
-.faction-b .turn-card { border-top: 1px solid var(--fb-border); }
 
 .turn-card-header {
   display: flex;
@@ -635,10 +633,8 @@ body {
   font-size: 0.72rem;
   font-weight: 500;
   letter-spacing: 0.02em;
+  color: var(--faction-color);
 }
-
-.faction-a .turn-model-name { color: var(--fa); }
-.faction-b .turn-model-name { color: var(--fb); }
 
 .turn-round-badge {
   font-size: 0.62rem;
@@ -693,7 +689,7 @@ body {
   font-variant-caps: small-caps;
   text-transform: lowercase;
   margin: 1.2rem 0 0.4rem;
-  color: var(--text-muted);
+  color: #5C564C;
 }
 .turn-card-argument h1 { font-size: 0.95rem; }
 .turn-card-argument h2 { font-size: 0.9rem; }
@@ -793,7 +789,7 @@ body {
   padding: 0.55rem 1.6rem;
   border-radius: 8px;
   border: none;
-  background: var(--fa);
+  background: var(--faction-color);
   color: oklch(12% 0.02 52);
   cursor: pointer;
   transition: opacity 160ms var(--ease-out), transform 120ms var(--ease-out);
@@ -832,7 +828,7 @@ body {
   padding: 0.6rem 1.4rem;
   border-radius: 8px;
   border: none;
-  background: var(--fa);
+  background: var(--faction-color);
   color: oklch(12% 0.02 52);
   cursor: pointer;
   transition: opacity 160ms var(--ease-out), transform 120ms var(--ease-out);
@@ -988,8 +984,20 @@ body {
   border: 1px solid var(--border);
 }
 
-.faction-a-builder { border-color: var(--fa-border); background: var(--fa-subtle); }
-.faction-b-builder { border-color: var(--fb-border); background: var(--fb-subtle); }
+.faction-a-builder { 
+  --faction-color: oklch(45% 0.1 260);
+  --faction-subtle: oklch(45% 0.1 260 / 0.12);
+  --faction-border: oklch(45% 0.1 260 / 0.30);
+  border-color: var(--faction-border); 
+  background: var(--faction-subtle); 
+}
+.faction-b-builder { 
+  --faction-color: oklch(45% 0.15 40);
+  --faction-subtle: oklch(45% 0.15 40 / 0.12);
+  --faction-border: oklch(45% 0.15 40 / 0.30);
+  border-color: var(--faction-border); 
+  background: var(--faction-subtle); 
+}
 
 .faction-builder-header {
   display: flex;
@@ -1030,16 +1038,10 @@ body {
   user-select: none;
 }
 
-.faction-a-builder .model-pick-btn.selected {
-  background: var(--fa-subtle);
-  color: var(--fa);
-  border-color: var(--fa-border);
-}
-
-.faction-b-builder .model-pick-btn.selected {
-  background: var(--fb-subtle);
-  color: var(--fb);
-  border-color: var(--fb-border);
+.faction-builder .model-pick-btn.selected {
+  background: var(--faction-subtle);
+  color: var(--faction-color);
+  border-color: var(--faction-border);
 }
 
 /* ─── Animations ──────────────────────────────────────────── */
