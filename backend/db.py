@@ -46,6 +46,7 @@ async def init_pool() -> None:
                 argument    TEXT    NOT NULL,
                 team_msg    TEXT,
                 thinking    TEXT,
+                latency     INT,
                 created_at  BIGINT  NOT NULL
             );
 
@@ -98,6 +99,7 @@ def _message_row_to_dict(row: asyncpg.Record) -> dict:
         "argument": row["argument"],
         "teamMsg": row["team_msg"],
         "thinking": row["thinking"],
+        "latency": row.get("latency"),
         "createdAt": row["created_at"],
     }
 
@@ -258,16 +260,17 @@ async def insert_message(
     argument: str,
     team_msg: str | None,
     thinking: str | None,
+    latency: int | None = None,
 ) -> dict:
     now = int(time.time() * 1000)
     async with _pool_conn() as conn:
         row = await conn.fetchrow(
             """
             INSERT INTO messages
-                (debate_id, round, faction, model_id, argument, team_msg, thinking, created_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                (debate_id, round, faction, model_id, argument, team_msg, thinking, latency, created_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING *
             """,
-            debate_id, round, faction, model_id, argument, team_msg, thinking, now,
+            debate_id, round, faction, model_id, argument, team_msg, thinking, latency, now,
         )
     return _message_row_to_dict(row)

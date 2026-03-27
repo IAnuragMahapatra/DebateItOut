@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+import time
 import uuid
 from contextlib import asynccontextmanager
 
@@ -207,7 +208,9 @@ async def advance_turn(debate_id: str):
         context = moderator.assemble_context(debate, messages, speaker, MODELS)
         context = moderator.apply_token_budget(context, speaker["model_id"])
 
+        t0 = time.time()
         result = await handlers.dispatch(model, context["system"], context["messages"])
+        latency = int((time.time() - t0) * 1000)
 
         parsed = moderator.parse_xml_response(result["reply"])
         if not parsed["parse_ok"]:
@@ -224,6 +227,7 @@ async def advance_turn(debate_id: str):
             argument=parsed["argument"],
             team_msg=parsed["team_msg"],
             thinking=thinking,
+            latency=latency,
         )
 
         all_messages = await db.get_messages(debate_id)
@@ -272,7 +276,9 @@ async def retry_turn(debate_id: str):
         context = moderator.assemble_context(debate, messages, speaker, MODELS)
         context = moderator.apply_token_budget(context, speaker["model_id"])
 
+        t0 = time.time()
         result = await handlers.dispatch(model, context["system"], context["messages"])
+        latency = int((time.time() - t0) * 1000)
 
         parsed = moderator.parse_xml_response(result["reply"])
         if not parsed["parse_ok"]:
@@ -288,6 +294,7 @@ async def retry_turn(debate_id: str):
             argument=parsed["argument"],
             team_msg=parsed["team_msg"],
             thinking=thinking,
+            latency=latency,
         )
 
         all_messages = await db.get_messages(debate_id)
@@ -365,6 +372,7 @@ def _build_full_response(debate: dict, messages: list[dict]) -> dict:
             "faction": msg["faction"],
             "modelId": msg["modelId"],
             "argument": msg["argument"],
+            "latency": msg.get("latency"),
             "createdAt": msg["createdAt"],
         })
 
