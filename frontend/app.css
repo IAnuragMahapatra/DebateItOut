@@ -514,6 +514,7 @@ body {
   flex: 1;
   overflow: hidden;
   position: relative;
+  min-height: 0;
 }
 
 /* Faction columns */
@@ -522,6 +523,7 @@ body {
   flex-direction: column;
   overflow: hidden;
   border-right: 1px solid var(--border);
+  min-height: 0;
 }
 
 .faction-a { border-top: 1px solid var(--fa); }
@@ -578,6 +580,7 @@ body {
 .faction-turns {
   flex: 1;
   overflow-y: auto;
+  min-height: 0;
   padding: 0.75rem 0.75rem 1.5rem;
   display: flex;
   flex-direction: column;
