@@ -1049,6 +1049,3 @@ body {
   .debate-proposition { font-size: 0.78rem; }
 }
 
-/* Flow-sheet aesthetic overrides */
-button, input, textarea, .turn-card, .model-chip-display, .debate-item, pre, code, blockquote, .modal, .modal-content, .model-pick-btn {
-}
