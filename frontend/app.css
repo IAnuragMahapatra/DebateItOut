@@ -4,7 +4,7 @@
   --bg:          #F5F0E8; /* parchment */
   --surface:     #EDE8DC; /* slightly darker parchment for cards */
   --ink:         #1C1916; /* near-black for all body text */
-  --ink-faded:   #7A7067; /* muted, for metadata and dividers */
+  --ink-faded:   #514B45; /* muted, for metadata and dividers */
   --border:      #C8BFA8; /* warm tan hairline */
 
   --faction-a:   #3A5A8C; /* cobalt */
@@ -445,7 +445,7 @@ body {
 .debate-proposition {
   flex: 1;
   font-family: 'Fraunces', 'Source Serif Display', serif;
-  font-size: 0.88rem;
+  font-size: 1.25rem;
   font-weight: 600;
   color: var(--ink);
   text-align: center;
@@ -487,30 +487,47 @@ body {
   padding-right: 1rem;
 }
 
+.log-entry {
+  display: inline-flex;
+  align-items: center;
+}
+
+.log-arrow {
+  display: inline-block;
+  font-size: 1.1em;
+  margin-right: 0.4rem;
+  flex-shrink: 0;
+}
+
 .log-entry.warn { color: oklch(78% 0.15 80); }
-.log-entry.concluded { color: oklch(70% 0.18 140); }
+.log-entry.concluded { color: var(--ink); font-weight: 700; }
 .log-entry.error { color: oklch(65% 0.2 25); }
 
 /* Debate area — two columns */
 .debate-area {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  border-top: 2px solid var(--border);
+  border-top: none;
   gap: 0;
   flex: 1;
   overflow: hidden;
   position: relative;
   min-height: 0;
 }
-.faction-column.faction-a { border-right: 1px solid var(--border); }
+#connector-overlay { display: none !important; }
+.faction-column.faction-a { border-right: none; }
 
+.faction-column.faction-a .faction-models,
+.faction-column.faction-a .faction-turns {
+  border-right: 1px solid var(--border);
+}
 
 /* Faction columns */
 .faction-column {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-right: 1px solid var(--border);
+  border-right: none;
   min-height: 0;
 }
 
@@ -549,7 +566,6 @@ body {
   color: var(--ink-faded);
   padding: 6px 16px;
   background: var(--surface);
-  border-bottom: 1px solid var(--border);
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
@@ -560,6 +576,11 @@ body {
 
 
 
+.model-chip-display {
+  font-weight: 700;
+  color: var(--ink);
+}
+
 .model-chip-display::before { content: '['; margin-right: 2px; }
 .model-chip-display::after { content: ']'; margin-left: 2px; }
 
@@ -567,7 +588,7 @@ body {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
-  padding: 0.75rem 0.75rem 1.5rem;
+  padding: 0 0.75rem 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
@@ -600,27 +621,45 @@ body {
 /* Turn card */
 .turn-card {
   background: var(--bg);
-  border-top: 1px solid var(--border);
-  padding: 20px 24px;
+  border-top: 2px solid var(--border);
+  padding: 16px 24px 12px;
   border-left: none;
   border-right: none;
   border-bottom: none;
   flex-shrink: 0;
 }
 
+.turn-card:first-child {
+  border-top: none;
+}
 
+.turn-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 12px;
+}
 
+.turn-model-name {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ink);
+}
 
-.faction-b
+.turn-model-name::before {
+  content: '[';
+}
 
+.turn-model-name::after {
+  content: ']';
+}
 
-
-
-
-
-
-
-
+.turn-round-badge {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ink-faded);
+}
 
 .turn-card-argument {
   font-family: var(--font-body);
@@ -634,7 +673,7 @@ body {
 
 
 /* Markdown in turn cards */
-.turn-card-argument p { margin-bottom: 0.5rem; }
+.turn-card-argument p { margin-bottom: 1.25rem; }
 .turn-card-argument p:last-child { margin-bottom: 0; }
 .turn-card-argument ul, .turn-card-argument ol { padding-inline-start: 1.25rem; margin-bottom: 0.5rem; }
 .turn-card-argument li { margin-bottom: 0.15rem; }
@@ -670,7 +709,7 @@ body {
 /* Collapsible blocks: team-msg + thinking */
 .collapsible-block {
   border-top: 1px solid var(--border);
-  margin-top: 0;
+  margin-top: 16px;
 }
 
 .collapsible-block summary {

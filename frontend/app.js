@@ -199,15 +199,17 @@ function renderDebateView() {
 
   const d = activeDebate;
   debateRoundIndicator.textContent = `ROUND ${d.currentRound} / ${d.maxRounds}`;
+
+  const arrowSvg = `<svg class="log-arrow" viewBox="0 0 24 24" width="1em" height="1em" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>`;
   
   if (d.status === "concluded") {
-    moderatorLogInner.innerHTML = `<span class="log-entry concluded">> Debate concluded at Round ${d.currentRound}</span>`;
+    moderatorLogInner.innerHTML = `<span class="log-entry concluded">${arrowSvg} Debate concluded at Round ${d.currentRound}</span>`;
   } else if (d.status === "error") {
-    moderatorLogInner.innerHTML = `<span class="log-entry error">> Error processing turn</span>`;
+    moderatorLogInner.innerHTML = `<span class="log-entry error">${arrowSvg} Error processing turn</span>`;
   } else if (d.status === "turn_in_progress") {
-    moderatorLogInner.innerHTML = `<span class="log-entry">> Turn in progress...</span>`;
+    moderatorLogInner.innerHTML = `<span class="log-entry">${arrowSvg} Turn in progress...</span>`;
   } else {
-    moderatorLogInner.innerHTML = `<span class="log-entry">> Ready for next turn</span>`;
+    moderatorLogInner.innerHTML = `<span class="log-entry">${arrowSvg} Ready for next turn</span>`;
   }
   debateProposition.textContent = d.proposition;
   debateProposition.title = d.proposition;
@@ -339,7 +341,7 @@ function createTurnCard(msg, modelName, teamMsgEntry, thinkingEntry) {
 
   const metadataBlock = document.createElement("span");
   metadataBlock.className = "turn-round-badge";
-  if (msg.latency) {
+  if (msg.latency != null) {
     metadataBlock.textContent = `R${msg.round} • ${msg.latency}ms`;
   } else {
     metadataBlock.textContent = `R${msg.round}`;
@@ -488,7 +490,7 @@ async function advanceTurn() {
   try {
     const result = await api(endpoint, { method: "POST" });
     log(`${getModelName(result.message.modelId)} (Faction ${result.message.faction}) spoke.`, "info");
-    
+
     // Stamp-style settle animation for moderator handoff
     moderatorLogInner.style.transition = "none";
     moderatorLogInner.style.transform = "scale(1.05)";
@@ -528,7 +530,7 @@ function drawConnectors() {
   const blocks = activeDebate.blocks;
 
   const strokeColor = "oklch(35% 0.01 60 / 0.5)"; // matching border token
-  
+
   for (let i = 1; i < blocks.length; i++) {
     const prevBlock = blocks[i - 1];
     const currBlock = blocks[i];
@@ -546,15 +548,15 @@ function drawConnectors() {
     const currTop = firstCurrCard.top - debateAreaRect.top + 20; // point to somewhat near the header
 
     let pathD = "";
-    
+
     if (isPrevA) {
       const startX = firstPrevCard.right - debateAreaRect.left + 4;
       const endX = firstCurrCard.left - debateAreaRect.left - 4;
       const midY = (prevTop + prevBottom) / 2;
       const bracketDepth = 8;
-      
+
       pathD = `
-        M ${startX} ${prevTop} 
+        M ${startX} ${prevTop}
         L ${startX + bracketDepth} ${prevTop}
         L ${startX + bracketDepth} ${prevBottom}
         L ${startX} ${prevBottom}
@@ -568,7 +570,7 @@ function drawConnectors() {
       const bracketDepth = 8;
 
       pathD = `
-        M ${startX} ${prevTop} 
+        M ${startX} ${prevTop}
         L ${startX - bracketDepth} ${prevTop}
         L ${startX - bracketDepth} ${prevBottom}
         L ${startX} ${prevBottom}
