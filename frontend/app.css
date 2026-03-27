@@ -4,8 +4,8 @@
 :root {
   color-scheme: dark;
   /* Neutrals */
-  --bg:              #000000;
-  --surface:         oklch(18% 0.01 60);
+  --bg:              #1C1916;
+  --surface:         transparent;
   --surface-raised:  oklch(22% 0.01 60);
   --border:          oklch(35% 0.01 60 / 0.6);
   --text-main:       oklch(95% 0.01 60);
@@ -490,31 +490,16 @@ body {
   .header-rename-btn:hover { background: oklch(100% 0 0 / 0.06); color: var(--text-main); }
 }
 
-/* Moderator log */
-.moderator-log {
-  background: oklch(9% 0.01 250);
-  border-bottom: 1px solid var(--border);
-  padding: 0 1.25rem;
-  height: 32px;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.moderator-log-inner {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-  height: 100%;
-  overflow-x: auto;
-  white-space: nowrap;
-}
-
-.moderator-log-inner::-webkit-scrollbar { display: none; }
-
-.log-entry {
+/* Moderator log (Moved to control bar) */
+.moderator-log-inline {
+  flex: 1;
+  font-family: 'IBM Plex Mono', monospace;
   font-size: 0.72rem;
   color: var(--text-muted);
-  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 1rem;
 }
 
 .log-entry.warn { color: oklch(78% 0.15 80); }
@@ -539,6 +524,9 @@ body {
   border-right: 1px solid var(--border);
 }
 
+.faction-a { border-top: 1px solid var(--fa); }
+.faction-b { border-top: 1px solid var(--fb); }
+
 .faction-column:last-child { border-right: none; }
 
 .faction-header {
@@ -552,9 +540,9 @@ body {
 
 .faction-label {
   font-family: 'Fraunces', 'Source Serif Display', serif;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-size: 0.95rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
@@ -577,15 +565,15 @@ body {
 }
 
 .model-chip-display {
+  font-family: 'IBM Plex Mono', monospace;
   font-size: 0.68rem;
-  padding: 0.18rem 0.5rem;
-  border-radius: 999px;
   font-weight: 500;
   letter-spacing: 0.01em;
+  color: var(--text-muted);
 }
 
-.faction-a .model-chip-display { background: var(--fa-subtle); color: var(--fa); border: 1px solid var(--fa-border); }
-.faction-b .model-chip-display { background: var(--fb-subtle); color: var(--fb); border: 1px solid var(--fb-border); }
+.model-chip-display::before { content: '['; margin-right: 2px; }
+.model-chip-display::after { content: ']'; margin-left: 2px; }
 
 .faction-turns {
   flex: 1;
@@ -623,14 +611,14 @@ body {
 /* Turn card */
 .turn-card {
   background: var(--surface);
-  border-radius: 10px;
+  border-radius: 0;
   overflow: hidden;
   border: 1px solid var(--border);
   flex-shrink: 0;
 }
 
-.faction-a .turn-card { border-top: 2px solid var(--fa-border); }
-.faction-b .turn-card { border-top: 2px solid var(--fb-border); }
+.faction-a .turn-card { border-top: 1px solid var(--fa-border); }
+.faction-b .turn-card { border-top: 1px solid var(--fb-border); }
 
 .turn-card-header {
   display: flex;
@@ -640,7 +628,7 @@ body {
 }
 
 .turn-model-name {
-  font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+  font-family: 'IBM Plex Mono', monospace;
   font-size: 0.72rem;
   font-weight: 500;
   letter-spacing: 0.02em;
@@ -697,14 +685,16 @@ body {
 }
 .turn-card-argument h1, .turn-card-argument h2,
 .turn-card-argument h3, .turn-card-argument h4 {
-  font-family: 'Fraunces', 'Source Serif Display', serif;
-  font-weight: 600;
-  margin: 0.6rem 0 0.3rem;
-  color: var(--text-main);
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 500;
+  font-variant-caps: small-caps;
+  text-transform: lowercase;
+  margin: 1.2rem 0 0.4rem;
+  color: var(--text-muted);
 }
-.turn-card-argument h1 { font-size: 1.1rem; }
-.turn-card-argument h2 { font-size: 1rem; }
-.turn-card-argument h3 { font-size: 0.92rem; }
+.turn-card-argument h1 { font-size: 0.95rem; }
+.turn-card-argument h2 { font-size: 0.9rem; }
+.turn-card-argument h3 { font-size: 0.85rem; }
 
 /* Collapsible blocks: team-msg + thinking */
 .collapsible-block {
@@ -783,8 +773,8 @@ body {
 .control-bar {
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 0.75rem 1.25rem;
+  justify-content: space-between;
+  padding: 0.5rem 1.25rem;
   border-top: 1px solid var(--border);
   background: var(--surface);
   flex-shrink: 0;
@@ -1072,4 +1062,9 @@ body {
   .faction-builder-row { grid-template-columns: 1fr; }
   .vs-divider { padding-top: 0; }
   .debate-proposition { font-size: 0.78rem; }
+}
+
+/* Flow-sheet aesthetic overrides */
+button, input, textarea, .turn-card, .model-chip-display, .debate-item, pre, code, blockquote, .modal, .modal-content, .model-pick-btn {
+  border-radius: 0 !important;
 }

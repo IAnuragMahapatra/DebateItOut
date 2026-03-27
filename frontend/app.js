@@ -27,7 +27,6 @@ const emptyState       = $("#empty-state");
 const emptyNewBtn      = $("#empty-new-btn");
 const debateView       = $("#debate-view");
 const debateHeader     = $("#debate-header");
-const debateStatusBadge = $("#debate-status-badge");
 const debateRoundIndicator = $("#debate-round-indicator");
 const debateProposition = $("#debate-proposition");
 const moderatorLogInner = $("#moderator-log-inner");
@@ -199,9 +198,17 @@ function renderDebateView() {
   debateView.style.display = "";
 
   const d = activeDebate;
-  debateStatusBadge.textContent = d.status.replace(/_/g, " ");
-  debateStatusBadge.className = `debate-status-badge ${d.status}`;
-  debateRoundIndicator.textContent = `Round ${d.currentRound} / ${d.maxRounds}`;
+  debateRoundIndicator.textContent = `ROUND ${d.currentRound} / ${d.maxRounds}`;
+  
+  if (d.status === "concluded") {
+    moderatorLogInner.innerHTML = `<span class="log-entry concluded">> Debate concluded at Round ${d.currentRound}</span>`;
+  } else if (d.status === "error") {
+    moderatorLogInner.innerHTML = `<span class="log-entry error">> Error processing turn</span>`;
+  } else if (d.status === "turn_in_progress") {
+    moderatorLogInner.innerHTML = `<span class="log-entry">> Turn in progress...</span>`;
+  } else {
+    moderatorLogInner.innerHTML = `<span class="log-entry">> Ready for next turn</span>`;
+  }
   debateProposition.textContent = d.proposition;
   debateProposition.title = d.proposition;
 
@@ -332,7 +339,11 @@ function createTurnCard(msg, modelName, teamMsgEntry, thinkingEntry) {
 
   const metadataBlock = document.createElement("span");
   metadataBlock.className = "turn-round-badge";
-  metadataBlock.textContent = `R${msg.round} • ${msg.latency || '--'}ms`;
+  if (msg.latency) {
+    metadataBlock.textContent = `R${msg.round} • ${msg.latency}ms`;
+  } else {
+    metadataBlock.textContent = `R${msg.round}`;
+  }
 
   header.append(nameEl, metadataBlock);
   card.appendChild(header);
