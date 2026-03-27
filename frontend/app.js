@@ -491,11 +491,13 @@ async function advanceTurn() {
     if (result.status === "concluded") log("Debate concluded.", "concluded");
     if (!result.message.parseOk) log("Warning: model didn't follow XML format, used fallback.", "warn");
 
+    advancing = false;
     await loadDebate(activeDebateId);
     renderDebateView();
   } catch (err) {
     log(`Turn failed: ${err.message}`, "error");
     // reload to get error status from server
+    advancing = false;
     try { await loadDebate(activeDebateId); renderDebateView(); } catch {}
   } finally {
     advancing = false;

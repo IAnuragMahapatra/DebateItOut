@@ -2,8 +2,9 @@
 
 /* ─── Tokens ──────────────────────────────────────────────── */
 :root {
+  color-scheme: dark;
   /* Neutrals */
-  --bg:              oklch(15% 0.01 60);
+  --bg:              #000000;
   --surface:         oklch(18% 0.01 60);
   --surface-raised:  oklch(22% 0.01 60);
   --border:          oklch(35% 0.01 60 / 0.6);
@@ -625,6 +626,7 @@ body {
   border-radius: 10px;
   overflow: hidden;
   border: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .faction-a .turn-card { border-top: 2px solid var(--fa-border); }
