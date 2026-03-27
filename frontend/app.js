@@ -265,6 +265,10 @@ function renderTranscript(d) {
   const seenRoundsA = new Set();
   const seenRoundsB = new Set();
 
+  // For block tracking
+  activeDebate.blocks = [];
+  let currentBlock = null;
+
   for (const msg of transcript) {
     const isA = msg.faction === "A";
     const container = isA ? factionATurns : factionBTurns;
@@ -285,7 +289,14 @@ function renderTranscript(d) {
     const teamMsgEntry = privateData.teamMessages?.find(t => t.round === msg.round && t.modelId === msg.modelId);
     const thinkingEntry = privateData.thinking?.find(t => t.round === msg.round && t.modelId === msg.modelId);
 
-    container.appendChild(createTurnCard(msg, modelName, teamMsgEntry, thinkingEntry));
+    const card = createTurnCard(msg, modelName, teamMsgEntry, thinkingEntry);
+    container.appendChild(card);
+
+    if (!currentBlock || currentBlock.faction !== msg.faction) {
+      currentBlock = { faction: msg.faction, cards: [] };
+      activeDebate.blocks.push(currentBlock);
+    }
+    currentBlock.cards.push(card);
   }
 
   // add thinking placeholders if still advancing
@@ -299,6 +310,8 @@ function renderTranscript(d) {
   // auto-scroll both to bottom
   factionATurns.scrollTop = factionATurns.scrollHeight;
   factionBTurns.scrollTop = factionBTurns.scrollHeight;
+
+  requestAnimationFrame(drawConnectors);
 }
 
 function getModelName(modelId) {
@@ -317,11 +330,11 @@ function createTurnCard(msg, modelName, teamMsgEntry, thinkingEntry) {
   nameEl.className = "turn-model-name";
   nameEl.textContent = modelName;
 
-  const roundBadge = document.createElement("span");
-  roundBadge.className = "turn-round-badge";
-  roundBadge.textContent = `R${msg.round}`;
+  const metadataBlock = document.createElement("span");
+  metadataBlock.className = "turn-round-badge";
+  metadataBlock.textContent = `R${msg.round} • ${msg.latency || '--'}ms`;
 
-  header.append(nameEl, roundBadge);
+  header.append(nameEl, metadataBlock);
   card.appendChild(header);
 
   const argEl = document.createElement("div");
@@ -464,6 +477,17 @@ async function advanceTurn() {
   try {
     const result = await api(endpoint, { method: "POST" });
     log(`${getModelName(result.message.modelId)} (Faction ${result.message.faction}) spoke.`, "info");
+    
+    // Stamp-style settle animation for moderator handoff
+    moderatorLogInner.style.transition = "none";
+    moderatorLogInner.style.transform = "scale(1.05)";
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        moderatorLogInner.style.transition = "transform 200ms var(--ease-out)";
+        moderatorLogInner.style.transform = "scale(1)";
+      });
+    });
+
     if (result.status === "concluded") log("Debate concluded.", "concluded");
     if (!result.message.parseOk) log("Warning: model didn't follow XML format, used fallback.", "warn");
 
@@ -476,8 +500,83 @@ async function advanceTurn() {
   } finally {
     advancing = false;
     if (activeDebate) renderControlBar(activeDebate.status);
+    requestAnimationFrame(drawConnectors);
   }
 }
+
+// ─── SVG Connectors ──────────────────────────────────────────
+const connectorOverlay = $("#connector-overlay");
+
+function drawConnectors() {
+  if (!connectorOverlay || !activeDebate || !activeDebate.blocks) return;
+  connectorOverlay.innerHTML = "";
+
+  const debateAreaRect = $("#debate-area").getBoundingClientRect();
+  const blocks = activeDebate.blocks;
+
+  const strokeColor = "oklch(35% 0.01 60 / 0.5)"; // matching border token
+  
+  for (let i = 1; i < blocks.length; i++) {
+    const prevBlock = blocks[i - 1];
+    const currBlock = blocks[i];
+
+    if (prevBlock.cards.length === 0 || currBlock.cards.length === 0) continue;
+
+    const firstPrevCard = prevBlock.cards[0].getBoundingClientRect();
+    const lastPrevCard = prevBlock.cards[prevBlock.cards.length - 1].getBoundingClientRect();
+    const firstCurrCard = currBlock.cards[0].getBoundingClientRect();
+
+    const isPrevA = prevBlock.faction === "A";
+
+    const prevTop = firstPrevCard.top - debateAreaRect.top;
+    const prevBottom = lastPrevCard.bottom - debateAreaRect.top;
+    const currTop = firstCurrCard.top - debateAreaRect.top + 20; // point to somewhat near the header
+
+    let pathD = "";
+    
+    if (isPrevA) {
+      const startX = firstPrevCard.right - debateAreaRect.left + 4;
+      const endX = firstCurrCard.left - debateAreaRect.left - 4;
+      const midY = (prevTop + prevBottom) / 2;
+      const bracketDepth = 8;
+      
+      pathD = `
+        M ${startX} ${prevTop} 
+        L ${startX + bracketDepth} ${prevTop}
+        L ${startX + bracketDepth} ${prevBottom}
+        L ${startX} ${prevBottom}
+        M ${startX + bracketDepth} ${midY}
+        L ${endX} ${currTop}
+      `;
+    } else {
+      const startX = firstPrevCard.left - debateAreaRect.left - 4;
+      const endX = firstCurrCard.right - debateAreaRect.left + 4;
+      const midY = (prevTop + prevBottom) / 2;
+      const bracketDepth = 8;
+
+      pathD = `
+        M ${startX} ${prevTop} 
+        L ${startX - bracketDepth} ${prevTop}
+        L ${startX - bracketDepth} ${prevBottom}
+        L ${startX} ${prevBottom}
+        M ${startX - bracketDepth} ${midY}
+        L ${endX} ${currTop}
+      `;
+    }
+
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", pathD);
+    path.setAttribute("stroke", strokeColor);
+    path.setAttribute("stroke-width", "1.5");
+    path.setAttribute("fill", "none");
+    connectorOverlay.appendChild(path);
+  }
+}
+
+const resizeObserver = new ResizeObserver(() => {
+  requestAnimationFrame(drawConnectors);
+});
+resizeObserver.observe($("#debate-area"));
 
 // ─── Create debate modal ──────────────────────────────────────
 let selectedA = [];
@@ -642,6 +741,13 @@ async function init() {
   }
 
   renderDebateView();
+
+  // Add event listeners for details expansion to redraw connectors
+  document.addEventListener('toggle', (e) => {
+    if (e.target.matches('details.collapsible-block')) {
+      setTimeout(drawConnectors, 20); // wait for layout to settle
+    }
+  }, true);
 }
 
 init().catch(console.error);
