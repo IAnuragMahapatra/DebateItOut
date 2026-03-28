@@ -85,6 +85,11 @@ FORMATTING RULES (follow exactly):
 - No tables
 </argument>
 
+CRITICAL XML RULES:
+- You MUST properly close all XML tags you open. 
+- If you open <thinking>, you MUST close it with </thinking> before starting another block. 
+- Do not forget the closing slash (/). Failing to close tags will break the system and leak your private thoughts.
+
 The <argument> block is required. The others are optional but encouraged.
 Only the text inside <argument> crosses to the opposing faction — nothing else.
 
