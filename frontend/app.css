@@ -468,12 +468,14 @@ body {
 
 .moderator-log-inline {
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
   font-family: var(--font-mono);
   font-size: 0.72rem;
   color: var(--ink-faded);
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
   padding-right: 1rem;
 }
 
@@ -774,7 +776,7 @@ body {
   padding: 0.55rem 1.6rem;
   border: none;
   background: var(--ink);
-  color: oklch(12% 0.02 52);
+  color: var(--surface);
   cursor: pointer;
   transition: opacity 160ms var(--ease-out), transform 120ms var(--ease-out);
   min-width: 160px;
@@ -811,7 +813,7 @@ body {
   padding: 0.6rem 1.4rem;
   border: none;
   background: var(--ink);
-  color: oklch(12% 0.02 52);
+  color: var(--surface);
   cursor: pointer;
   transition: opacity 160ms var(--ease-out), transform 120ms var(--ease-out);
   min-height: 44px;
