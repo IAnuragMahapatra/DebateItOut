@@ -37,6 +37,9 @@ const factionBTurns    = $("#faction-b-turns");
 const controlBar       = $("#control-bar");
 const advanceBtn       = $("#advance-btn");
 const headerRenameBtn  = $("#header-rename-btn");
+const exportJsonBtn    = $("#export-json-btn");
+const exportMdBtn      = $("#export-md-btn");
+const exportPrivateToggle = $("#export-private-data");
 
 const createModal    = $("#create-modal");
 const modalClose     = $("#modal-close");
@@ -687,6 +690,8 @@ sidebarSearch.addEventListener("input", e => { searchQuery = e.target.value; ren
 
 advanceBtn.addEventListener("click", advanceTurn);
 headerRenameBtn.addEventListener("click", openRenameModal);
+exportJsonBtn.addEventListener("click", exportToJSON);
+exportMdBtn.addEventListener("click", exportToMarkdown);
 
 modalClose.addEventListener("click", closeCreateModal);
 modalCancel.addEventListener("click", closeCreateModal);
@@ -736,6 +741,63 @@ async function init() {
       setTimeout(drawConnectors, 20);
     }
   }, true);
+}
+
+function downloadFile(content, filename, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function exportToJSON() {
+  if (!activeDebate) return;
+  const content = JSON.stringify(activeDebate, null, 2);
+  downloadFile(content, `debate-${activeDebate.id}.json`, 'application/json');
+}
+
+function exportToMarkdown() {
+  if (!activeDebate) return;
+  
+  const includePrivate = exportPrivateToggle.checked;
+  const d = activeDebate;
+  let md = `# Debate: ${getDebateName(d)}\n\n`;
+  md += `**Proposition**: ${d.proposition}\n\n`;
+  md += `**Status**: ${d.status}\n\n`;
+  md += `**Faction A**: ${d.factionA.models.map(getModelName).join(', ')} (Stance: "${d.factionA.stance}")\n`;
+  md += `**Faction B**: ${d.factionB.models.map(getModelName).join(', ')} (Stance: "${d.factionB.stance}")\n\n`;
+  md += `---\n\n`;
+
+  const transcript = d.publicTranscript || [];
+  const aPrivate = d.factionAPrivate || { teamMessages: [], thinking: [] };
+  const bPrivate = d.factionBPrivate || { teamMessages: [], thinking: [] };
+
+  for (const msg of transcript) {
+    const modelName = getModelName(msg.modelId);
+    md += `### Round ${msg.round} - ${modelName} (Faction ${msg.faction})\n\n`;
+    
+    if (includePrivate) {
+      const privateData = msg.faction === "A" ? aPrivate : bPrivate;
+      const teamMsgEntry = privateData.teamMessages?.find(t => t.round === msg.round && t.modelId === msg.modelId);
+      const thinkingEntry = privateData.thinking?.find(t => t.round === msg.round && t.modelId === msg.modelId);
+      
+      if (teamMsgEntry?.teamMessage) {
+        md += `<details><summary>Team Message</summary>\n\n${teamMsgEntry.teamMessage}\n\n</details>\n\n`;
+      }
+      if (thinkingEntry?.thinking) {
+        md += `<details><summary>Thinking</summary>\n\n${thinkingEntry.thinking}\n\n</details>\n\n`;
+      }
+    }
+    
+    md += `${msg.argument}\n\n`;
+  }
+  
+  downloadFile(md, `debate-${activeDebate.id}.md`, 'text/markdown');
 }
 
 init().catch(console.error);

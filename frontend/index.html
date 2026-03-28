@@ -84,7 +84,27 @@
             </div>
             <div class="debate-proposition" id="debate-proposition"></div>
             <div class="debate-header-right">
-              <button class="header-rename-btn" id="header-rename-btn" title="Rename debate" aria-label="Rename debate">
+              <label class="export-toggle" title="Include team messages and thinking in exports">
+                <input type="checkbox" id="export-private-data" checked />
+                <span>Private data</span>
+              </label>
+              <button class="header-action-btn" id="export-json-btn" title="Export JSON" aria-label="Export JSON">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span class="btn-text">JSON</span>
+              </button>
+              <button class="header-action-btn" id="export-md-btn" title="Export Markdown" aria-label="Export Markdown">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span class="btn-text">MD</span>
+              </button>
+              <button class="header-action-btn header-rename-btn" id="header-rename-btn" title="Rename debate" aria-label="Rename debate">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
                 </svg>

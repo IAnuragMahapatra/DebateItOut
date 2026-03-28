@@ -448,7 +448,7 @@ body {
 
 .debate-header-right { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
 
-.header-rename-btn {
+.header-action-btn {
   background: transparent;
   border: none;
   cursor: pointer;
@@ -462,8 +462,30 @@ body {
   min-height: 28px;
 }
 
+.btn-text {
+  font-size: 10px;
+  font-weight: bold;
+  margin-left: 2px;
+}
+
+.export-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.65rem;
+  color: var(--ink-faded);
+  cursor: pointer;
+  margin-right: 0.5rem;
+  user-select: none;
+}
+
+.export-toggle input {
+  cursor: pointer;
+  margin: 0;
+}
+
 @media (hover: hover) and (pointer: fine) {
-  .header-rename-btn:hover { color: var(--ink); }
+  .header-action-btn:hover { color: var(--ink); }
 }
 
 .moderator-log-inline {
