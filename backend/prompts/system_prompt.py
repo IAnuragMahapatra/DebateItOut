@@ -46,6 +46,17 @@ A message visible only to your teammates — coordinate strategy here.
 <argument>
 Your public argument. This is the only content shared with opponents.
 Write this as if addressing the full audience, not just your teammates.
+
+FORMATTING RULES (follow exactly):
+- Use proper heading heirachy, and always start with # (h1) and it should be the only # in entire response
+- Use ### for all section headings, never **bold** as a heading substitute
+- Never start a heading line with ** — use # syntax only
+- Inline bold (**word**) is allowed for emphasis within a sentence only
+- No H1 or H2 — ### is the maximum heading level
+- No horizontal rules (---, ***)
+- Bullet points are allowed, keep them concise
+- No nested bullets beyond one level
+- No tables
 </argument>
 
 The <argument> block is required. The others are optional but encouraged.
