@@ -620,7 +620,7 @@ body {
 .turn-round-badge {
   font-family: var(--font-mono);
   font-size: 0.65rem;
-  color: var(--border);
+  color: var(--ink-faded);
 }
 
 .argument-body {
@@ -661,17 +661,27 @@ body {
 }
 
 .argument-body h1,
-.argument-body h2,
-.argument-body h3,
-.argument-body h4 {
+.argument-body h2 {
   font-family: var(--font-mono);
-  font-size: 0.70rem;
-  font-weight: 400;
-  color: var(--ink-faded);
+  font-size: 1.10rem;
+  font-weight: 550;
+  color: var(--ink);
   text-transform: uppercase;
   letter-spacing: 0.10em;
   margin-top: 2em;
-  margin-bottom: 0.4em;
+  margin-bottom: 0.5em;
+}
+
+.argument-body h3,
+.argument-body h4 {
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 2em;
+  margin-bottom: 0.5em;
 }
 
 .collapsible-block {
