@@ -770,6 +770,27 @@ function exportToJSON() {
   const incThinking = exportIncThinking.checked;
   const incTeamMsg = exportIncTeamMsg.checked;
   
+  if (debateExport.factionA && debateExport.factionA.models) {
+    debateExport.factionA.models = debateExport.factionA.models.map(getModelName);
+  }
+  if (debateExport.factionB && debateExport.factionB.models) {
+    debateExport.factionB.models = debateExport.factionB.models.map(getModelName);
+  }
+  
+  const enrichWithNames = (arr) => {
+    if (arr) arr.forEach(msg => { msg.modelName = getModelName(msg.modelId); });
+  };
+  
+  enrichWithNames(debateExport.publicTranscript);
+  if (debateExport.factionAPrivate) {
+    enrichWithNames(debateExport.factionAPrivate.teamMessages);
+    enrichWithNames(debateExport.factionAPrivate.thinking);
+  }
+  if (debateExport.factionBPrivate) {
+    enrichWithNames(debateExport.factionBPrivate.teamMessages);
+    enrichWithNames(debateExport.factionBPrivate.thinking);
+  }
+  
   if (!incThinking || !incTeamMsg) {
     if (debateExport.factionAPrivate) {
       if (!incThinking) delete debateExport.factionAPrivate.thinking;
