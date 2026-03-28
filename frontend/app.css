@@ -434,16 +434,14 @@ body {
 }
 
 .debate-proposition {
-  flex: 1;
+  flex: 2;
   font-family: var(--font-display);
   font-size: 1.25rem;
   font-weight: 600;
   color: var(--ink);
   text-align: center;
   line-height: 1.35;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  word-break: break-word;
 }
 
 .debate-header-right { 
