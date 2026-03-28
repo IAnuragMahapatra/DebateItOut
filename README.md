@@ -96,3 +96,7 @@ Each model sees:
 - **Opponent history** (only the public `<argument>` content from opponents)
 
 Token budget eviction removes the oldest same-faction rounds first. Opponent history from the current round is never evicted since that is what is being actively rebutted.
+
+## Exporting debates
+
+You can export debates as JSON or Markdown files using the export button in the top right of the screen. A modal will prompt you to choose whether to include private data like thinking blocks and team messages. This makes it easy to save transcripts or share them cleanly.
