@@ -92,6 +92,19 @@ def assemble_context(
     teammate_names = [_model_name(mid, all_models) for mid in teammate_ids]
     opponent_names = [_model_name(mid, all_models) for mid in opponent_ids] if reveal else None
 
+    current_round = debate["currentRound"]
+    max_rounds = debate["maxRounds"]
+
+    # Faction A opens odd rounds, Faction B opens even rounds
+    is_opening_faction = (faction == "A" and current_round % 2 == 1) or \
+                         (faction == "B" and current_round % 2 == 0)
+    is_first_round = current_round == 1
+    is_final_round = current_round == max_rounds
+
+    # Check if this model is the first one in its faction's model list
+    faction_key = "factionA" if faction == "A" else "factionB"
+    is_faction_lead = debate[faction_key]["models"][0] == model_id
+
     system = build_system_prompt(
         proposition=debate["proposition"],
         stance=stance,
@@ -99,6 +112,10 @@ def assemble_context(
         teammates=teammate_names,
         opponents=opponent_names,
         reveal_opponents=reveal,
+        is_opening_faction=is_opening_faction,
+        is_first_round=is_first_round,
+        is_final_round=is_final_round,
+        is_faction_lead=is_faction_lead,
     )
 
     raw: list[dict] = []

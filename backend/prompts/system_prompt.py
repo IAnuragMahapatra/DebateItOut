@@ -8,6 +8,10 @@ def build_system_prompt(
     teammates: list[str],
     opponents: list[str] | None,
     reveal_opponents: bool,
+    is_opening_faction: bool,
+    is_first_round: bool,
+    is_final_round: bool,
+    is_faction_lead: bool,
 ) -> str:
     """Builds the per-turn system prompt for a debating model."""
 
@@ -23,10 +27,32 @@ def build_system_prompt(
         n = len(opponents) if opponents else "one or more"
         opponent_section = f"You are debating against {n} opponent model(s). Their identities are not disclosed."
 
+    if is_first_round:
+        if is_opening_faction:
+            if is_faction_lead:
+                strategy = "Establish a strong foundation and present primary constructive arguments."
+            else:
+                strategy = "Build upon your teammate's opening, reinforce the foundation, and expand with new supporting arguments."
+        else:
+            if is_faction_lead:
+                strategy = "Rebut the opening arguments made by the opposing faction's block, and introduce your own primary constructive arguments."
+            else:
+                strategy = "Continue dismantling the opponent's case, defend any counter-attacks, and reinforce your teammate's arguments."
+    elif is_final_round:
+        strategy = "Provide a strong closing statement. Highlight critical flaws in the opponent's case, and explain why your stance wins without introducing entirely new lines of argument."
+    else:
+        if is_opening_faction:
+            strategy = "Attack weaknesses in the opponent's previous round, reinforce own points, and present new constructive arguments. (Lead focuses on broad rebuttal, subsequent expands)."
+        else:
+            strategy = "Dismantle new arguments just presented by the opening block, defend previous points, and continue advancing the case."
+
     return f"""You are {model_name}, participating in a structured AI debate.
 
 PROPOSITION: {proposition}
 YOUR STANCE: {stance}
+
+CURRENT STAGE STRATEGY
+{strategy}
 
 TEAM
 {teammate_section}
