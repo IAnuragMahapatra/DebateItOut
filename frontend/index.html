@@ -38,7 +38,7 @@
           </div>
 
           <div class="sidebar-search">
-            <input type="search" id="sidebar-search" placeholder="Search debates…" autocomplete="off" />
+            <input type="search" id="sidebar-search" placeholder="Search debates…" autocomplete="off" aria-label="Search debates" />
           </div>
 
           <div class="sidebar-list" id="sidebar-list"></div>
@@ -152,12 +152,12 @@
               <span class="faction-label faction-a-label">Faction A</span>
             </div>
             <div class="form-group">
-              <label class="form-label" for="faction-a-stance">Stance</label>
+              <label class="form-label" for="faction-a-stance-input">Stance</label>
               <input class="form-input" id="faction-a-stance-input" type="text" placeholder="for" value="for" />
             </div>
             <div class="form-group">
-              <label class="form-label">Models</label>
-              <div class="model-picker" id="faction-a-picker" data-faction="A"></div>
+              <span class="form-label" id="faction-a-models-label">Models</span>
+              <div class="model-picker" id="faction-a-picker" data-faction="A" aria-labelledby="faction-a-models-label"></div>
             </div>
           </div>
 
@@ -169,12 +169,12 @@
               <span class="faction-label faction-b-label">Faction B</span>
             </div>
             <div class="form-group">
-              <label class="form-label" for="faction-b-stance">Stance</label>
+              <label class="form-label" for="faction-b-stance-input">Stance</label>
               <input class="form-input" id="faction-b-stance-input" type="text" placeholder="against" value="against" />
             </div>
             <div class="form-group">
-              <label class="form-label">Models</label>
-              <div class="model-picker" id="faction-b-picker" data-faction="B"></div>
+              <span class="form-label" id="faction-b-models-label">Models</span>
+              <div class="model-picker" id="faction-b-picker" data-faction="B" aria-labelledby="faction-b-models-label"></div>
             </div>
           </div>
         </div>
@@ -204,7 +204,7 @@
         </button>
       </div>
       <div class="modal-body">
-        <input class="form-input" id="rename-input" type="text" placeholder="Custom name…" />
+        <input class="form-input" id="rename-input" type="text" placeholder="Custom name…" aria-label="Custom name" />
       </div>
       <div class="modal-footer">
         <button class="btn-ghost" id="rename-cancel">Cancel</button>
