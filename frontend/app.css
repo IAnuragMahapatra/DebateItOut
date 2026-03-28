@@ -549,9 +549,6 @@ body {
   color: var(--ink);
 }
 
-.model-chip-display::before { content: '['; margin-right: 2px; }
-.model-chip-display::after { content: ']'; margin-left: 2px; }
-
 .faction-turns {
   flex: 1;
   overflow-y: auto;
@@ -611,8 +608,7 @@ body {
   color: var(--ink);
 }
 
-.turn-model-name::before { content: '['; }
-.turn-model-name::after { content: ']'; }
+
 
 .turn-round-badge {
   font-family: var(--font-mono);
@@ -655,6 +651,20 @@ body {
   color: var(--ink-faded);
   font-style: italic;
   background: oklch(72% 0.02 52 / 0.06);
+}
+
+.turn-card-argument h1,
+.turn-card-argument h2,
+.turn-card-argument h3,
+.turn-card-argument h4 {
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ink-faded);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 1.75em;
+  margin-bottom: 0.5em;
 }
 
 .collapsible-block {
