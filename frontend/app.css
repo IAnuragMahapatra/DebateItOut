@@ -623,7 +623,7 @@ body {
   color: var(--border);
 }
 
-.turn-card-argument {
+.argument-body {
   font-family: var(--font-body);
   font-size: 1rem;
   line-height: 1.75;
@@ -631,28 +631,28 @@ body {
   max-width: 65ch;
 }
 
-.turn-card-argument p { margin-bottom: 1.25rem; }
-.turn-card-argument p:last-child { margin-bottom: 0; }
-.turn-card-argument ul, .turn-card-argument ol { padding-inline-start: 1.25rem; margin-bottom: 0.5rem; }
-.turn-card-argument li { margin-bottom: 0.15rem; }
-.turn-card-argument strong { font-weight: 600; color: var(--ink); }
-.turn-card-argument em { font-style: italic; }
-.turn-card-argument code {
+.argument-body p { margin-bottom: 1.25rem; }
+.argument-body p:last-child { margin-bottom: 0; }
+.argument-body ul, .argument-body ol { padding-inline-start: 1.25rem; margin-bottom: 0.5rem; }
+.argument-body li { margin-bottom: 0.15rem; }
+.argument-body strong { font-weight: 600; color: var(--ink); }
+.argument-body em { font-style: italic; }
+.argument-body code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.82em;
   background: var(--surface);
   padding: 0.1rem 0.3rem;
   color: oklch(78% 0.12 290);
 }
-.turn-card-argument pre {
+.argument-body pre {
   background: oklch(9% 0.01 250);
   padding: 0.75rem;
   overflow-x: auto;
   margin: 0.5rem 0;
   border: 1px solid var(--border);
 }
-.turn-card-argument pre code { background: transparent; padding: 0; }
-.turn-card-argument blockquote {
+.argument-body pre code { background: transparent; padding: 0; }
+.argument-body blockquote {
   padding: 0.4rem 0.75rem;
   margin: 0.4rem 0;
   color: var(--ink-faded);
@@ -660,10 +660,10 @@ body {
   background: oklch(72% 0.02 52 / 0.06);
 }
 
-.turn-card-argument h1,
-.turn-card-argument h2,
-.turn-card-argument h3,
-.turn-card-argument h4 {
+.argument-body h1,
+.argument-body h2,
+.argument-body h3,
+.argument-body h4 {
   font-family: var(--font-mono);
   font-size: 0.70rem;
   font-weight: 400;

@@ -298,7 +298,7 @@ function renderTranscript(d) {
   if (advancing) {
     const placeholder = document.createElement("div");
     placeholder.className = "turn-card";
-    placeholder.innerHTML = `<div class="turn-card-header"><span class="turn-model-name" style="color:var(--text-muted)">Thinking…</span></div><div class="turn-card-argument"><span class="typing-dots"><span></span><span></span><span></span></span></div>`;
+    placeholder.innerHTML = `<div class="turn-card-header"><span class="turn-model-name" style="color:var(--text-muted)">Thinking…</span></div><div class="argument-body"><span class="typing-dots"><span></span><span></span><span></span></span></div>`;
     (activeDebate.factionA ? factionATurns : factionBTurns).appendChild(placeholder);
   }
 
@@ -336,7 +336,7 @@ function createTurnCard(msg, modelName, teamMsgEntry, thinkingEntry) {
   card.appendChild(header);
 
   const argEl = document.createElement("div");
-  argEl.className = "turn-card-argument";
+  argEl.className = "argument-body";
   argEl.innerHTML = marked.parse(msg.argument || "");
   card.appendChild(argEl);
 
