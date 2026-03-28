@@ -267,10 +267,23 @@ def parse_xml_response(raw_text: str) -> dict:
     """
     Extracts <thinking>, <team_msg>, <argument> from model output.
     If <argument> is missing, the whole response becomes the argument (parse_ok=False).
+
+    Handles:
+      - Normal case: all three tags present and closed
+      - Unclosed <argument>: open tag exists but close tag is missing (model fault),
+        everything after the open tag is treated as the argument
+      - Total fallback: no <argument> tag at all — strip any extracted tag blocks
+        from the raw text before storing as argument
     """
     thinking = _extract_tag(raw_text, "thinking")
     team_msg = _extract_tag(raw_text, "team_msg")
     argument = _extract_tag(raw_text, "argument")
+
+    if argument is None:
+        # try unclosed <argument> — model wrote the open tag but forgot to close it
+        argument = _extract_unclosed_tag(raw_text, "argument")
+        if argument is not None:
+            print(f"[xml-parse] recovered unclosed <argument> tag")
 
     if argument is not None:
         return {
@@ -280,10 +293,24 @@ def parse_xml_response(raw_text: str) -> dict:
             "parse_ok": True,
         }
 
-    # fallback — whole response is treated as the public argument
+    # total fallback — strip any tag blocks we did extract so the argument
+    # field doesn't contain raw <thinking>...</thinking> or <team_msg>...</team_msg>
+    cleaned = raw_text
+    if thinking is not None:
+        cleaned = re.sub(r"<thinking>.*?</thinking>", "", cleaned, count=1, flags=re.DOTALL)
+    if team_msg is not None:
+        cleaned = re.sub(r"<team_msg>.*?</team_msg>", "", cleaned, count=1, flags=re.DOTALL)
+    cleaned = cleaned.strip()
+
+    if not cleaned:
+        cleaned = raw_text.strip()
+        print(f"[xml-parse] stripping tags left empty text, using raw response")
+    else:
+        print(f"[xml-parse] fallback: stripped extracted tag blocks from argument")
+
     return {
-        "argument": raw_text.strip(),
-        "team_msg": None,
+        "argument": cleaned,
+        "team_msg": team_msg.strip() if team_msg else None,
         "thinking": thinking.strip() if thinking else None,
         "parse_ok": False,
     }
@@ -291,4 +318,10 @@ def parse_xml_response(raw_text: str) -> dict:
 
 def _extract_tag(text: str, tag: str) -> str | None:
     match = re.search(rf"<{tag}>(.*?)</{tag}>", text, re.DOTALL)
+    return match.group(1) if match else None
+
+
+def _extract_unclosed_tag(text: str, tag: str) -> str | None:
+    """Fallback for when a model writes <tag> but never writes </tag>."""
+    match = re.search(rf"<{tag}>(.*)", text, re.DOTALL)
     return match.group(1) if match else None
