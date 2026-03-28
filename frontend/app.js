@@ -1,10 +1,9 @@
 const API = "";
 marked.setOptions({ breaks: true, gfm: true });
 
-// ─── State ──────────────────────────────────────────────────
 let debates = [];
 let activeDebateId = null;
-let activeDebate = null;    // full debate object
+let activeDebate = null;
 let models = [];
 let sidebarOpen = false;
 let searchQuery = "";
@@ -15,7 +14,6 @@ let advancing = false;
 const $ = (sel, ctx = document) => ctx.querySelector(sel);
 const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
 
-// ─── DOM refs ───────────────────────────────────────────────
 const sidebar          = $("#sidebar");
 const sidebarOverlay   = $("#sidebar-overlay");
 const sidebarList      = $("#sidebar-list");
@@ -40,7 +38,6 @@ const controlBar       = $("#control-bar");
 const advanceBtn       = $("#advance-btn");
 const headerRenameBtn  = $("#header-rename-btn");
 
-// modal refs
 const createModal    = $("#create-modal");
 const modalClose     = $("#modal-close");
 const modalCancel    = $("#modal-cancel");
@@ -58,7 +55,6 @@ const renameCancel   = $("#rename-cancel");
 const renameSubmit   = $("#rename-submit");
 const renameInput    = $("#rename-input");
 
-// ─── API helpers ─────────────────────────────────────────────
 async function api(path, opts = {}) {
   const res = await fetch(API + path, {
     headers: { "Content-Type": "application/json" },
@@ -71,7 +67,6 @@ async function api(path, opts = {}) {
   return res.json();
 }
 
-// ─── Sidebar rendering ───────────────────────────────────────
 function getDebateName(d) {
   if (d.customName) return d.customName;
   const words = (d.proposition || "").trim().split(/\s+/);
@@ -186,7 +181,6 @@ function renderSidebar() {
   }
 }
 
-// ─── Debate view rendering ───────────────────────────────────
 function renderDebateView() {
   if (!activeDebate) {
     emptyState.style.display = "";
@@ -217,14 +211,9 @@ function renderDebateView() {
   factionAStance.textContent = `"${d.factionA.stance}"`;
   factionBStance.textContent = `"${d.factionB.stance}"`;
 
-  // faction model chips
   renderFactionChips(factionAModels, d.factionA.models, "a");
   renderFactionChips(factionBModels, d.factionB.models, "b");
-
-  // control bar
   renderControlBar(d.status);
-
-  // transcript
   renderTranscript(d);
 }
 
@@ -270,11 +259,9 @@ function renderTranscript(d) {
   factionATurns.innerHTML = "";
   factionBTurns.innerHTML = "";
 
-  const maxRound = Math.max(0, ...transcript.map(m => m.round));
   const seenRoundsA = new Set();
   const seenRoundsB = new Set();
 
-  // For block tracking
   activeDebate.blocks = [];
   let currentBlock = null;
 
@@ -308,7 +295,6 @@ function renderTranscript(d) {
     currentBlock.cards.push(card);
   }
 
-  // add thinking placeholders if still advancing
   if (advancing) {
     const placeholder = document.createElement("div");
     placeholder.className = "turn-card";
@@ -316,7 +302,6 @@ function renderTranscript(d) {
     (activeDebate.factionA ? factionATurns : factionBTurns).appendChild(placeholder);
   }
 
-  // auto-scroll both to bottom
   factionATurns.scrollTop = factionATurns.scrollHeight;
   factionBTurns.scrollTop = factionBTurns.scrollHeight;
 
@@ -355,7 +340,6 @@ function createTurnCard(msg, modelName, teamMsgEntry, thinkingEntry) {
   argEl.innerHTML = marked.parse(msg.argument || "");
   card.appendChild(argEl);
 
-  // team message (collapsible)
   if (teamMsgEntry?.teamMessage) {
     const details = document.createElement("details");
     details.className = "collapsible-block";
@@ -368,7 +352,6 @@ function createTurnCard(msg, modelName, teamMsgEntry, thinkingEntry) {
     card.appendChild(details);
   }
 
-  // thinking (collapsible)
   if (thinkingEntry?.thinking) {
     const details = document.createElement("details");
     details.className = "collapsible-block";
@@ -384,7 +367,6 @@ function createTurnCard(msg, modelName, teamMsgEntry, thinkingEntry) {
   return card;
 }
 
-// ─── Moderator log ───────────────────────────────────────────
 function log(message, type = "info") {
   const el = document.createElement("span");
   el.className = `log-entry ${type}`;
@@ -393,7 +375,6 @@ function log(message, type = "info") {
   moderatorLogInner.scrollLeft = moderatorLogInner.scrollWidth;
 }
 
-// ─── Data fetching ────────────────────────────────────────────
 async function fetchDebates() {
   debates = await api("/debates");
 }
@@ -413,7 +394,6 @@ async function loadDebate(id) {
   if (i >= 0) debates[i] = { ...debates[i], ...d };
 }
 
-// ─── Debate actions ───────────────────────────────────────────
 async function switchDebate(id) {
   if (id === activeDebateId) return;
   activeDebateId = id;
@@ -491,7 +471,7 @@ async function advanceTurn() {
     const result = await api(endpoint, { method: "POST" });
     log(`${getModelName(result.message.modelId)} (Faction ${result.message.faction}) spoke.`, "info");
 
-    // Stamp-style settle animation for moderator handoff
+    // stamp-style settle animation for moderator handoff
     moderatorLogInner.style.transition = "none";
     moderatorLogInner.style.transform = "scale(1.05)";
     requestAnimationFrame(() => {
@@ -509,7 +489,6 @@ async function advanceTurn() {
     renderDebateView();
   } catch (err) {
     log(`Turn failed: ${err.message}`, "error");
-    // reload to get error status from server
     advancing = false;
     try { await loadDebate(activeDebateId); renderDebateView(); } catch {}
   } finally {
@@ -519,7 +498,6 @@ async function advanceTurn() {
   }
 }
 
-// ─── SVG Connectors ──────────────────────────────────────────
 const connectorOverlay = $("#connector-overlay");
 
 function drawConnectors() {
@@ -529,7 +507,7 @@ function drawConnectors() {
   const debateAreaRect = $("#debate-area").getBoundingClientRect();
   const blocks = activeDebate.blocks;
 
-  const strokeColor = "oklch(35% 0.01 60 / 0.5)"; // matching border token
+  const strokeColor = "oklch(35% 0.01 60 / 0.5)";
 
   for (let i = 1; i < blocks.length; i++) {
     const prevBlock = blocks[i - 1];
@@ -545,7 +523,7 @@ function drawConnectors() {
 
     const prevTop = firstPrevCard.top - debateAreaRect.top;
     const prevBottom = lastPrevCard.bottom - debateAreaRect.top;
-    const currTop = firstCurrCard.top - debateAreaRect.top + 20; // point to somewhat near the header
+    const currTop = firstCurrCard.top - debateAreaRect.top + 20;
 
     let pathD = "";
 
@@ -593,7 +571,6 @@ const resizeObserver = new ResizeObserver(() => {
 });
 resizeObserver.observe($("#debate-area"));
 
-// ─── Create debate modal ──────────────────────────────────────
 let selectedA = [];
 let selectedB = [];
 
@@ -672,7 +649,6 @@ async function submitCreateDebate() {
   }
 }
 
-// ─── Rename modal (header button) ────────────────────────────
 function openRenameModal() {
   if (!activeDebate) return;
   renameInput.value = activeDebate.customName || "";
@@ -697,11 +673,9 @@ async function submitRename() {
   closeRenameModal();
 }
 
-// ─── Sidebar open/close helpers ───────────────────────────────
 function openSidebar() { sidebarOpen = true; sidebar.classList.add("open"); sidebarOverlay.style.display = ""; }
 function closeSidebar() { sidebarOpen = false; sidebar.classList.remove("open"); sidebarOverlay.style.display = "none"; }
 
-// ─── Event wiring ─────────────────────────────────────────────
 sidebarToggle.addEventListener("click", () => { sidebarOpen ? closeSidebar() : openSidebar(); });
 sidebarOverlay.addEventListener("click", closeSidebar);
 mobileToggle.addEventListener("click", openSidebar);
@@ -739,7 +713,6 @@ document.addEventListener("keydown", e => {
   if (e.key === "Escape") { closeCreateModal(); closeRenameModal(); }
 });
 
-// ─── Init ─────────────────────────────────────────────────────
 async function init() {
   await Promise.all([fetchDebates(), fetchModels()]);
 
@@ -757,10 +730,10 @@ async function init() {
 
   renderDebateView();
 
-  // Add event listeners for details expansion to redraw connectors
+  // redraw connectors when collapsible blocks expand/collapse
   document.addEventListener('toggle', (e) => {
     if (e.target.matches('details.collapsible-block')) {
-      setTimeout(drawConnectors, 20); // wait for layout to settle
+      setTimeout(drawConnectors, 20);
     }
   }, true);
 }
