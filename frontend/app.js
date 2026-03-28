@@ -37,9 +37,13 @@ const factionBTurns    = $("#faction-b-turns");
 const controlBar       = $("#control-bar");
 const advanceBtn       = $("#advance-btn");
 const headerRenameBtn  = $("#header-rename-btn");
-const exportJsonBtn    = $("#export-json-btn");
-const exportMdBtn      = $("#export-md-btn");
-const exportPrivateToggle = $("#export-private-data");
+const exportBtn        = $("#export-btn");
+const exportModal      = $("#export-modal");
+const exportModalClose = $("#export-modal-close");
+const exportIncThinking = $("#export-inc-thinking");
+const exportIncTeamMsg  = $("#export-inc-team-msg");
+const exportMdConfirm   = $("#export-md-confirm");
+const exportJsonConfirm = $("#export-json-confirm");
 
 const createModal    = $("#create-modal");
 const modalClose     = $("#modal-close");
@@ -690,8 +694,12 @@ sidebarSearch.addEventListener("input", e => { searchQuery = e.target.value; ren
 
 advanceBtn.addEventListener("click", advanceTurn);
 headerRenameBtn.addEventListener("click", openRenameModal);
-exportJsonBtn.addEventListener("click", exportToJSON);
-exportMdBtn.addEventListener("click", exportToMarkdown);
+
+exportBtn.addEventListener("click", () => { exportModal.style.display = "flex"; });
+exportModalClose.addEventListener("click", () => { exportModal.style.display = "none"; });
+exportModal.addEventListener("click", e => { if (e.target === exportModal) exportModal.style.display = "none"; });
+exportMdConfirm.addEventListener("click", () => { exportToMarkdown(); exportModal.style.display = "none"; });
+exportJsonConfirm.addEventListener("click", () => { exportToJSON(); exportModal.style.display = "none"; });
 
 modalClose.addEventListener("click", closeCreateModal);
 modalCancel.addEventListener("click", closeCreateModal);
@@ -757,14 +765,31 @@ function downloadFile(content, filename, type) {
 
 function exportToJSON() {
   if (!activeDebate) return;
-  const content = JSON.stringify(activeDebate, null, 2);
+  
+  const debateExport = JSON.parse(JSON.stringify(activeDebate));
+  const incThinking = exportIncThinking.checked;
+  const incTeamMsg = exportIncTeamMsg.checked;
+  
+  if (!incThinking || !incTeamMsg) {
+    if (debateExport.factionAPrivate) {
+      if (!incThinking) delete debateExport.factionAPrivate.thinking;
+      if (!incTeamMsg) delete debateExport.factionAPrivate.teamMessages;
+    }
+    if (debateExport.factionBPrivate) {
+      if (!incThinking) delete debateExport.factionBPrivate.thinking;
+      if (!incTeamMsg) delete debateExport.factionBPrivate.teamMessages;
+    }
+  }
+
+  const content = JSON.stringify(debateExport, null, 2);
   downloadFile(content, `debate-${activeDebate.id}.json`, 'application/json');
 }
 
 function exportToMarkdown() {
   if (!activeDebate) return;
   
-  const includePrivate = exportPrivateToggle.checked;
+  const incThinking = exportIncThinking.checked;
+  const incTeamMsg = exportIncTeamMsg.checked;
   const d = activeDebate;
   let md = `# Debate: ${getDebateName(d)}\n\n`;
   md += `**Proposition**: ${d.proposition}\n\n`;
@@ -781,15 +806,15 @@ function exportToMarkdown() {
     const modelName = getModelName(msg.modelId);
     md += `### Round ${msg.round} - ${modelName} (Faction ${msg.faction})\n\n`;
     
-    if (includePrivate) {
+    if (incThinking || incTeamMsg) {
       const privateData = msg.faction === "A" ? aPrivate : bPrivate;
       const teamMsgEntry = privateData.teamMessages?.find(t => t.round === msg.round && t.modelId === msg.modelId);
       const thinkingEntry = privateData.thinking?.find(t => t.round === msg.round && t.modelId === msg.modelId);
       
-      if (teamMsgEntry?.teamMessage) {
+      if (incTeamMsg && teamMsgEntry?.teamMessage) {
         md += `<details><summary>Team Message</summary>\n\n${teamMsgEntry.teamMessage}\n\n</details>\n\n`;
       }
-      if (thinkingEntry?.thinking) {
+      if (incThinking && thinkingEntry?.thinking) {
         md += `<details><summary>Thinking</summary>\n\n${thinkingEntry.thinking}\n\n</details>\n\n`;
       }
     }
