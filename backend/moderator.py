@@ -5,8 +5,8 @@ import re
 
 from prompts.system_prompt import build_system_prompt
 
-
 # --- turn order ---
+
 
 def determine_next_speaker(
     debate: dict,
@@ -24,7 +24,9 @@ def determine_next_speaker(
     else:
         ordered = [("B", mid) for mid in b_models] + [("A", mid) for mid in a_models]
 
-    spoke = {(m["faction"], m["modelId"]) for m in messages if m["round"] == current_round}
+    spoke = {
+        (m["faction"], m["modelId"]) for m in messages if m["round"] == current_round
+    }
 
     for faction, model_id in ordered:
         if (faction, model_id) not in spoke:
@@ -37,7 +39,9 @@ def determine_next_speaker(
     raise ValueError(f"All models have already spoken in round {current_round}")
 
 
-def determine_next_status(debate: dict, all_messages: list[dict]) -> tuple[str, int | None]:
+def determine_next_status(
+    debate: dict, all_messages: list[dict]
+) -> tuple[str, int | None]:
     """Returns (next_status, next_round). next_round is None when the round doesn't change."""
     current_round = debate["currentRound"]
     max_rounds = debate["maxRounds"]
@@ -56,6 +60,7 @@ def determine_next_status(debate: dict, all_messages: list[dict]) -> tuple[str, 
 
 
 # --- context assembly ---
+
 
 def _model_name(model_id: str, all_models: list[dict]) -> str:
     m = next((x for x in all_models if x["id"] == model_id), None)
@@ -90,14 +95,17 @@ def assemble_context(
 
     reveal = os.getenv("REVEAL_OPPONENT_IDENTITY", "false").lower() == "true"
     teammate_names = [_model_name(mid, all_models) for mid in teammate_ids]
-    opponent_names = [_model_name(mid, all_models) for mid in opponent_ids] if reveal else None
+    opponent_names = (
+        [_model_name(mid, all_models) for mid in opponent_ids] if reveal else None
+    )
 
     current_round = debate["currentRound"]
     max_rounds = debate["maxRounds"]
 
     # Faction A opens odd rounds, Faction B opens even rounds
-    is_opening_faction = (faction == "A" and current_round % 2 == 1) or \
-                         (faction == "B" and current_round % 2 == 0)
+    is_opening_faction = (faction == "A" and current_round % 2 == 1) or (
+        faction == "B" and current_round % 2 == 0
+    )
     is_first_round = current_round == 1
     is_final_round = current_round == max_rounds
 
@@ -145,7 +153,11 @@ def assemble_context(
 
         else:
             # opponent — user, argument only
-            prefix = f"[Opponent: {_model_name(mid, all_models)}]" if reveal else "[Opponent]"
+            prefix = (
+                f"[Opponent: {_model_name(mid, all_models)}]"
+                if reveal
+                else "[Opponent]"
+            )
             raw.append({"role": "user", "content": f"{prefix}\n{msg['argument']}"})
 
     # merge consecutive same-role entries (required for Anthropic)
@@ -154,7 +166,16 @@ def assemble_context(
     # Anthropic requires the conversation to start with a user message;
     # also inject one when there's no history at all (first turn)
     if not merged or merged[0]["role"] == "assistant":
-        merged.insert(0, {"role": "user", "content": "[Debate started. Make your opening argument.]"})
+        merged.insert(
+            0,
+            {
+                "role": "user",
+                "content": "[Debate started. Make your opening argument.]",
+            },
+        )
+
+    if merged and merged[-1]["role"] == "assistant":
+        merged.append({"role": "user", "content": "[Please continue the debate.]"})
 
     all_text = system + "".join(m["content"] for m in merged)
     token_estimate = len(all_text) // 4
@@ -187,6 +208,7 @@ def _merge_roles(messages: list[dict]) -> list[dict]:
 
 # --- token budget ---
 
+
 def apply_token_budget(context: dict, model_id: str) -> dict:
     """
     Evicts oldest same-faction rounds until under budget.
@@ -206,10 +228,13 @@ def apply_token_budget(context: dict, model_id: str) -> dict:
     evicted: list[int] = list(context["evicted_rounds"])
 
     # rounds eligible for eviction: same faction, older than (current - 1)
-    evictable = sorted({
-        m["round"] for m in context["_raw_messages"]
-        if m["faction"] == faction and m["round"] < current_round - 1
-    })
+    evictable = sorted(
+        {
+            m["round"]
+            for m in context["_raw_messages"]
+            if m["faction"] == faction and m["round"] < current_round - 1
+        }
+    )
 
     for evict_round in evictable:
         if context["token_estimate"] <= max_tokens:
@@ -219,7 +244,8 @@ def apply_token_budget(context: dict, model_id: str) -> dict:
         evicted.append(evict_round)
 
         filtered = [
-            m for m in context["_raw_messages"]
+            m
+            for m in context["_raw_messages"]
             if not (m["faction"] == faction and m["round"] == evict_round)
         ]
 
@@ -235,6 +261,7 @@ def apply_token_budget(context: dict, model_id: str) -> dict:
 
 
 # --- XML parsing ---
+
 
 def parse_xml_response(raw_text: str) -> dict:
     """
