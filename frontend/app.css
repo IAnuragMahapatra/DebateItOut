@@ -657,14 +657,14 @@ body {
 .turn-card-argument h2,
 .turn-card-argument h3,
 .turn-card-argument h4 {
-  font-family: var(--font-display);
-  font-size: 0.82rem;
-  font-weight: 700;
+  font-family: var(--font-mono);
+  font-size: 0.70rem;
+  font-weight: 400;
   color: var(--ink-faded);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-top: 1.75em;
-  margin-bottom: 0.5em;
+  letter-spacing: 0.10em;
+  margin-top: 2em;
+  margin-bottom: 0.4em;
 }
 
 .collapsible-block {
