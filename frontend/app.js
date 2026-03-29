@@ -47,10 +47,9 @@ const exportIncTeamMsg  = $("#export-inc-team-msg");
 const exportMdConfirm   = $("#export-md-confirm");
 const exportJsonConfirm = $("#export-json-confirm");
 
-const createModal    = $("#create-modal");
-const modalClose     = $("#modal-close");
-const modalCancel    = $("#modal-cancel");
-const modalSubmit    = $("#modal-submit");
+const newDebateView  = $("#new-debate-view");
+const newDebateCancel = $("#new-debate-cancel");
+const newDebateSubmit = $("#new-debate-submit");
 const propositionInput = $("#proposition-input");
 const factionAStanceInput = $("#faction-a-stance-input");
 const factionBStanceInput = $("#faction-b-stance-input");
@@ -264,13 +263,15 @@ function renderSidebar() {
 
 function renderDebateView() {
   if (!activeDebate) {
-    emptyState.style.display = "";
+    emptyState.style.display = debates.length === 0 ? "flex" : "none";
+    newDebateView.style.display = debates.length === 0 ? "none" : "none";
     debateView.style.display = "none";
     return;
   }
 
   emptyState.style.display = "none";
-  debateView.style.display = "";
+  newDebateView.style.display = "none";
+  debateView.style.display = "flex";
 
   const d = activeDebate;
   debateRoundIndicator.textContent = `ROUND ${d.currentRound} / ${d.maxRounds}`;
@@ -715,7 +716,7 @@ $("#faction-b-turns").addEventListener("scroll", redrawConnectors);
 let selectedA = [];
 let selectedB = [];
 
-function openCreateModal() {
+function showNewDebateView() {
   selectedA = [];
   selectedB = [];
   propositionInput.value = "";
@@ -723,11 +724,26 @@ function openCreateModal() {
   factionBStanceInput.value = "against";
   maxRoundsInput.value = "6";
   renderPickers();
-  createModal.style.display = "flex";
+  
+  activeDebateId = null;
+  activeDebate = null;
+  
+  emptyState.style.display = "none";
+  debateView.style.display = "none";
+  newDebateView.style.display = "flex";
+  
   requestAnimationFrame(() => propositionInput.focus());
 }
 
-function closeCreateModal() { createModal.style.display = "none"; }
+function closeNewDebateView() {
+  if (debates.length > 0) {
+    activeDebateId = sortedDebates()[0].id;
+    loadDebate(activeDebateId).catch(console.error);
+  } else {
+    newDebateView.style.display = "none";
+    emptyState.style.display = "flex";
+  }
+}
 
 function renderPickers() {
   renderPicker(factionAPicker, selectedA, "A");
@@ -765,8 +781,8 @@ async function submitCreateDebate() {
     return;
   }
 
-  modalSubmit.disabled = true;
-  modalSubmit.textContent = "Starting…";
+  newDebateSubmit.disabled = true;
+  newDebateSubmit.textContent = "Starting…";
 
   try {
     const d = await api("/debates", {
@@ -779,14 +795,14 @@ async function submitCreateDebate() {
       }),
     });
     debates = [d, ...debates];
-    closeCreateModal();
+
     await switchDebate(d.id);
     log(`Debate started: "${d.proposition.slice(0, 50)}${d.proposition.length > 50 ? "…" : ""}"`);
   } catch (err) {
     alert(`Failed to create debate: ${err.message}`);
   } finally {
-    modalSubmit.disabled = false;
-    modalSubmit.textContent = "Start Debate";
+    newDebateSubmit.disabled = false;
+    newDebateSubmit.textContent = "Start Debate";
   }
 }
 
@@ -821,8 +837,8 @@ sidebarToggle.addEventListener("click", () => { sidebarOpen ? closeSidebar() : o
 sidebarOverlay.addEventListener("click", closeSidebar);
 mobileToggle.addEventListener("click", openSidebar);
 
-newDebateBtn.addEventListener("click", openCreateModal);
-emptyNewBtn.addEventListener("click", openCreateModal);
+newDebateBtn.addEventListener("click", showNewDebateView);
+emptyNewBtn.addEventListener("click", showNewDebateView);
 
 sidebarSearch.addEventListener("input", e => { searchQuery = e.target.value; renderSidebar(); });
 
@@ -835,9 +851,8 @@ exportModal.addEventListener("click", e => { if (e.target === exportModal) expor
 exportMdConfirm.addEventListener("click", () => { exportToMarkdown(); exportModal.style.display = "none"; });
 exportJsonConfirm.addEventListener("click", () => { exportToJSON(); exportModal.style.display = "none"; });
 
-modalClose.addEventListener("click", closeCreateModal);
-modalCancel.addEventListener("click", closeCreateModal);
-modalSubmit.addEventListener("click", submitCreateDebate);
+newDebateCancel.addEventListener("click", closeNewDebateView);
+newDebateSubmit.addEventListener("click", submitCreateDebate);
 
 renameModalClose.addEventListener("click", closeRenameModal);
 renameCancel.addEventListener("click", closeRenameModal);
@@ -848,7 +863,6 @@ renameInput.addEventListener("keydown", e => {
   if (e.key === "Escape") closeRenameModal();
 });
 
-createModal.addEventListener("click", e => { if (e.target === createModal) closeCreateModal(); });
 renameModal.addEventListener("click", e => { if (e.target === renameModal) closeRenameModal(); });
 
 propositionInput.addEventListener("keydown", e => {
@@ -856,16 +870,17 @@ propositionInput.addEventListener("keydown", e => {
 });
 
 document.addEventListener("keydown", e => {
-  if ((e.ctrlKey || e.metaKey) && e.key === "n") { e.preventDefault(); openCreateModal(); }
-  if (e.key === "Escape") { closeCreateModal(); closeRenameModal(); }
+  if ((e.ctrlKey || e.metaKey) && e.key === "n") { e.preventDefault(); showNewDebateView(); }
+  if (e.key === "Escape") { closeRenameModal(); }
 });
 
 async function init() {
   try {
     await Promise.all([fetchDebates(), fetchModels()]);
   } catch {
-    emptyState.style.display = "";
+    emptyState.style.display = "flex";
     debateView.style.display = "none";
+    newDebateView.style.display = "none";
     const sub = emptyState.querySelector(".empty-sub");
     if (sub) sub.textContent = "Could not connect to backend. Is the server running?";
     renderPickers();

@@ -77,6 +77,62 @@
           </div>
         </div>
 
+        <!-- New Debate Config View -->
+        <div class="new-debate-view" id="new-debate-view" style="display:none">
+          <div class="new-debate-container">
+            <h2 class="new-debate-title">Configure New Debate</h2>
+
+            <div class="form-group">
+              <label class="form-label" for="proposition-input">Proposition</label>
+              <textarea class="form-textarea" id="proposition-input" rows="3" placeholder="e.g. AI will replace most knowledge work within 10 years" maxlength="2000"></textarea>
+            </div>
+
+            <div class="faction-builder-row">
+              <!-- Faction A -->
+              <div class="faction-builder faction-a-builder">
+                <div class="faction-builder-header">
+                  <span class="faction-label faction-a-label">Faction A</span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="faction-a-stance-input">Stance</label>
+                  <input class="form-input" id="faction-a-stance-input" type="text" placeholder="for" value="for" />
+                </div>
+                <div class="form-group">
+                  <span class="form-label" id="faction-a-models-label">Models</span>
+                  <div class="model-picker" id="faction-a-picker" data-faction="A" aria-labelledby="faction-a-models-label"></div>
+                </div>
+              </div>
+
+              <div class="vs-divider">VS</div>
+
+              <!-- Faction B -->
+              <div class="faction-builder faction-b-builder">
+                <div class="faction-builder-header">
+                  <span class="faction-label faction-b-label">Faction B</span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="faction-b-stance-input">Stance</label>
+                  <input class="form-input" id="faction-b-stance-input" type="text" placeholder="against" value="against" />
+                </div>
+                <div class="form-group">
+                  <span class="form-label" id="faction-b-models-label">Models</span>
+                  <div class="model-picker" id="faction-b-picker" data-faction="B" aria-labelledby="faction-b-models-label"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group form-group-inline">
+              <label class="form-label" for="max-rounds-input">Rounds</label>
+              <input class="form-input form-input-sm" id="max-rounds-input" type="number" min="1" max="20" value="6" />
+            </div>
+
+            <div class="new-debate-actions">
+              <button class="btn-ghost" id="new-debate-cancel">Cancel</button>
+              <button class="btn-primary" id="new-debate-submit">Start Debate</button>
+            </div>
+          </div>
+        </div>
+
         <!-- Active debate view (hidden until a debate is loaded) -->
         <div class="debate-view" id="debate-view" style="display:none">
 
@@ -130,71 +186,7 @@
     </div>
   </div>
 
-  <!-- Create debate modal -->
-  <div class="modal-overlay" id="create-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-    <div class="modal">
-      <div class="modal-header">
-        <h2 class="modal-title" id="modal-title">New Debate</h2>
-        <button class="modal-close" id="modal-close" aria-label="Close modal">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
-      </div>
 
-      <div class="modal-body">
-        <div class="form-group">
-          <label class="form-label" for="proposition-input">Proposition</label>
-          <textarea class="form-textarea" id="proposition-input" rows="3" placeholder="e.g. AI will replace most knowledge work within 10 years" maxlength="2000"></textarea>
-        </div>
-
-        <div class="faction-builder-row">
-          <!-- Faction A -->
-          <div class="faction-builder faction-a-builder">
-            <div class="faction-builder-header">
-              <span class="faction-label faction-a-label">Faction A</span>
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="faction-a-stance-input">Stance</label>
-              <input class="form-input" id="faction-a-stance-input" type="text" placeholder="for" value="for" />
-            </div>
-            <div class="form-group">
-              <span class="form-label" id="faction-a-models-label">Models</span>
-              <div class="model-picker" id="faction-a-picker" data-faction="A" aria-labelledby="faction-a-models-label"></div>
-            </div>
-          </div>
-
-          <div class="vs-divider">VS</div>
-
-          <!-- Faction B -->
-          <div class="faction-builder faction-b-builder">
-            <div class="faction-builder-header">
-              <span class="faction-label faction-b-label">Faction B</span>
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="faction-b-stance-input">Stance</label>
-              <input class="form-input" id="faction-b-stance-input" type="text" placeholder="against" value="against" />
-            </div>
-            <div class="form-group">
-              <span class="form-label" id="faction-b-models-label">Models</span>
-              <div class="model-picker" id="faction-b-picker" data-faction="B" aria-labelledby="faction-b-models-label"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="form-group form-group-inline">
-          <label class="form-label" for="max-rounds-input">Rounds</label>
-          <input class="form-input form-input-sm" id="max-rounds-input" type="number" min="1" max="20" value="6" />
-        </div>
-      </div>
-
-      <div class="modal-footer">
-        <button class="btn-ghost" id="modal-cancel">Cancel</button>
-        <button class="btn-primary" id="modal-submit">Start Debate</button>
-      </div>
-    </div>
-  </div>
 
   <!-- Inline rename modal -->
   <div class="modal-overlay" id="rename-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="rename-title">
