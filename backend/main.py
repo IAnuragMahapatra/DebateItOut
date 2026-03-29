@@ -185,10 +185,59 @@ async def delete_debate_endpoint(debate_id: str):
 
 # --- turn endpoints ---
 
+async def _execute_turn(debate_id: str, debate: dict) -> dict:
+    """Shared turn logic — called after status guard from both advance and retry."""
+    messages = await db.get_messages(debate_id)
+    speaker = moderator.determine_next_speaker(debate, messages, MODELS)
+    model = next((m for m in MODELS if m["id"] == speaker["model_id"]), None)
+    if not model:
+        raise ValueError(f"Model {speaker['model_id']} not found in pool")
+
+    context = moderator.assemble_context(debate, messages, speaker, MODELS)
+    context = moderator.apply_token_budget(context, speaker["model_id"])
+
+    t0 = time.time()
+    result = await handlers.dispatch(model, context["system"], context["messages"])
+    latency = int((time.time() - t0) * 1000)
+
+    parsed = moderator.parse_xml_response(result["reply"])
+    if not parsed["parse_ok"]:
+        print(f"[parse-fallback] debate={debate_id} round={debate['currentRound']} model={speaker['model_id']}")
+
+    # native thinking (Anthropic) takes priority over XML-parsed thinking
+    thinking = result.get("thinking") or parsed["thinking"]
+
+    msg = await db.insert_message(
+        debate_id=debate_id,
+        round=debate["currentRound"],
+        faction=speaker["faction"],
+        model_id=speaker["model_id"],
+        argument=parsed["argument"],
+        team_msg=parsed["team_msg"],
+        thinking=thinking,
+        latency=latency,
+    )
+
+    all_messages = await db.get_messages(debate_id)
+    next_status, next_round = moderator.determine_next_status(debate, all_messages)
+
+    async with db.pool_conn() as conn:
+        async with conn.transaction():
+            await db.set_debate_status(conn, debate_id, next_status, next_round)
+
+    return {
+        "debateId": debate_id,
+        "message": {**msg, "parseOk": parsed["parse_ok"]},
+        "round": next_round if next_round is not None else debate["currentRound"],
+        "status": next_status,
+        "tokenEstimate": context["token_estimate"],
+        "evictedRounds": context["evicted_rounds"],
+    }
+
+
 @app.post("/debates/{debate_id}/turn")
 async def advance_turn(debate_id: str):
-    # transaction 1: lock row, guard against concurrent calls
-    async with db._pool_conn() as conn:
+    async with db.pool_conn() as conn:
         async with conn.transaction():
             debate = await db.get_debate_for_update(conn, debate_id)
             if not debate:
@@ -197,59 +246,12 @@ async def advance_turn(debate_id: str):
                 raise HTTPException(409, {"error": "Cannot advance turn", "status": debate["status"]})
             await db.set_debate_status(conn, debate_id, "turn_in_progress")
 
-    # model call happens outside the lock
     try:
-        messages = await db.get_messages(debate_id)
-        speaker = moderator.determine_next_speaker(debate, messages, MODELS)
-        model = next((m for m in MODELS if m["id"] == speaker["model_id"]), None)
-        if not model:
-            raise ValueError(f"Model {speaker['model_id']} not found in pool")
-
-        context = moderator.assemble_context(debate, messages, speaker, MODELS)
-        context = moderator.apply_token_budget(context, speaker["model_id"])
-
-        t0 = time.time()
-        result = await handlers.dispatch(model, context["system"], context["messages"])
-        latency = int((time.time() - t0) * 1000)
-
-        parsed = moderator.parse_xml_response(result["reply"])
-        if not parsed["parse_ok"]:
-            print(f"[parse-fallback] debate={debate_id} round={debate['currentRound']} model={speaker['model_id']}")
-
-        # native thinking (Anthropic) takes priority over XML-parsed thinking
-        thinking = result.get("thinking") or parsed["thinking"]
-
-        msg = await db.insert_message(
-            debate_id=debate_id,
-            round=debate["currentRound"],
-            faction=speaker["faction"],
-            model_id=speaker["model_id"],
-            argument=parsed["argument"],
-            team_msg=parsed["team_msg"],
-            thinking=thinking,
-            latency=latency,
-        )
-
-        all_messages = await db.get_messages(debate_id)
-        next_status, next_round = moderator.determine_next_status(debate, all_messages)
-
-        async with db._pool_conn() as conn:
-            async with conn.transaction():
-                await db.set_debate_status(conn, debate_id, next_status, next_round)
-
-        return {
-            "debateId": debate_id,
-            "message": {**msg, "parseOk": parsed["parse_ok"]},
-            "round": next_round if next_round is not None else debate["currentRound"],
-            "status": next_status,
-            "tokenEstimate": context["token_estimate"],
-            "evictedRounds": context["evicted_rounds"],
-        }
-
+        return await _execute_turn(debate_id, debate)
     except HTTPException:
         raise
     except Exception as e:
-        async with db._pool_conn() as conn:
+        async with db.pool_conn() as conn:
             async with conn.transaction():
                 await db.set_debate_status(conn, debate_id, "error")
         raise HTTPException(502, f"Model dispatch failed: {e}")
@@ -257,7 +259,7 @@ async def advance_turn(debate_id: str):
 
 @app.post("/debates/{debate_id}/retry-turn")
 async def retry_turn(debate_id: str):
-    async with db._pool_conn() as conn:
+    async with db.pool_conn() as conn:
         async with conn.transaction():
             debate = await db.get_debate_for_update(conn, debate_id)
             if not debate:
@@ -267,59 +269,17 @@ async def retry_turn(debate_id: str):
             await db.set_debate_status(conn, debate_id, "turn_in_progress")
 
     try:
-        messages = await db.get_messages(debate_id)
-        speaker = moderator.determine_next_speaker(debate, messages, MODELS)
-        model = next((m for m in MODELS if m["id"] == speaker["model_id"]), None)
-        if not model:
-            raise ValueError(f"Model {speaker['model_id']} not found in pool")
-
-        context = moderator.assemble_context(debate, messages, speaker, MODELS)
-        context = moderator.apply_token_budget(context, speaker["model_id"])
-
-        t0 = time.time()
-        result = await handlers.dispatch(model, context["system"], context["messages"])
-        latency = int((time.time() - t0) * 1000)
-
-        parsed = moderator.parse_xml_response(result["reply"])
-        if not parsed["parse_ok"]:
-            print(f"[parse-fallback] debate={debate_id} round={debate['currentRound']} model={speaker['model_id']}")
-
-        thinking = result.get("thinking") or parsed["thinking"]
-
-        msg = await db.insert_message(
-            debate_id=debate_id,
-            round=debate["currentRound"],
-            faction=speaker["faction"],
-            model_id=speaker["model_id"],
-            argument=parsed["argument"],
-            team_msg=parsed["team_msg"],
-            thinking=thinking,
-            latency=latency,
-        )
-
-        all_messages = await db.get_messages(debate_id)
-        next_status, next_round = moderator.determine_next_status(debate, all_messages)
-
-        async with db._pool_conn() as conn:
-            async with conn.transaction():
-                await db.set_debate_status(conn, debate_id, next_status, next_round)
-
-        return {
-            "debateId": debate_id,
-            "message": {**msg, "parseOk": parsed["parse_ok"]},
-            "round": next_round if next_round is not None else debate["currentRound"],
-            "status": next_status,
-            "tokenEstimate": context["token_estimate"],
-            "evictedRounds": context["evicted_rounds"],
-        }
-
+        return await _execute_turn(debate_id, debate)
     except HTTPException:
         raise
     except Exception as e:
-        async with db._pool_conn() as conn:
+        async with db.pool_conn() as conn:
             async with conn.transaction():
                 await db.set_debate_status(conn, debate_id, "error")
         raise HTTPException(502, f"Model dispatch failed: {e}")
+
+
+
 
 
 @app.get("/debates/{debate_id}/turn-preview")
