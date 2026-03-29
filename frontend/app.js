@@ -689,10 +689,16 @@ function drawConnectors() {
   }
 }
 
-const resizeObserver = new ResizeObserver(() => {
-  requestAnimationFrame(drawConnectors);
-});
+function debounce(fn, ms) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+const redrawConnectors = debounce(() => requestAnimationFrame(drawConnectors), 100);
+
+const resizeObserver = new ResizeObserver(redrawConnectors);
 resizeObserver.observe($("#debate-area"));
+window.addEventListener("resize", redrawConnectors);
 
 let selectedA = [];
 let selectedB = [];
