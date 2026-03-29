@@ -81,6 +81,78 @@ function getDebateName(d) {
   return words.slice(0, 5).join(" ") + (words.length > 5 ? "…" : "") || "New Debate";
 }
 
+function getNextSpeaker(debate, transcript) {
+  if (!debate || !debate.factionA || !debate.factionB) return null;
+  const currentRound = debate.currentRound;
+  if (currentRound > debate.maxRounds) return null;
+  
+  const aModels = debate.factionA.models || [];
+  const bModels = debate.factionB.models || [];
+  
+  let ordered = [];
+  if (currentRound % 2 === 1) {
+    ordered = [...aModels.map(m => ({ faction: "A", id: m })), ...bModels.map(m => ({ faction: "B", id: m }))];
+  } else {
+    ordered = [...bModels.map(m => ({ faction: "B", id: m })), ...aModels.map(m => ({ faction: "A", id: m }))];
+  }
+  
+  const spoke = new Set(transcript.filter(m => m.round === currentRound).map(m => `${m.faction}:${m.modelId}`));
+  
+  for (const o of ordered) {
+    if (!spoke.has(`${o.faction}:${o.id}`)) {
+      return { faction: o.faction, modelId: o.id, round: currentRound, modelName: getModelName(o.id) };
+    }
+  }
+  return null;
+}
+
+function streamHtml(element, html) {
+  element.innerHTML = html;
+  
+  const textNodes = [];
+  function walk(node) {
+    if (node.nodeType === Node.TEXT_NODE && node.nodeValue.trim().length > 0) {
+      textNodes.push(node);
+    } else {
+      for (let i = 0; i < node.childNodes.length; i++) walk(node.childNodes[i]);
+    }
+  }
+  walk(element);
+  
+  const originalTexts = textNodes.map(n => n.nodeValue);
+  const totalChars = originalTexts.reduce((sum, text) => sum + text.length, 0);
+  textNodes.forEach(n => n.nodeValue = "");
+  
+  let nodeIdx = 0;
+  let charIdx = 0;
+  // Target 1.5s total duration (~90 frames)
+  const charsPerFrame = Math.max(2, Math.ceil(totalChars / 90));
+  
+  function tick() {
+    if (nodeIdx >= textNodes.length) return;
+    
+    charIdx += charsPerFrame;
+    const fullText = originalTexts[nodeIdx];
+    
+    if (charIdx >= fullText.length) {
+      textNodes[nodeIdx].nodeValue = fullText;
+      nodeIdx++;
+      charIdx = 0;
+    } else {
+      textNodes[nodeIdx].nodeValue = fullText.slice(0, charIdx);
+    }
+    
+    const container = element.closest('.faction-turns');
+    if (container) {
+      const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
+      if (isAtBottom) container.scrollTop = container.scrollHeight;
+    }
+    
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
 function sortedDebates() {
   const filtered = searchQuery
     ? debates.filter(d => getDebateName(d).toLowerCase().includes(searchQuery.toLowerCase()))
@@ -298,7 +370,7 @@ function renderTranscript(d) {
     const thinkingEntry = privateData.thinking?.find(t => t.round === msg.round && t.modelId === msg.modelId);
 
     const isNew = prevIds.size > 0 && !prevIds.has(msg.id);
-    const card = createTurnCard(msg, modelName, teamMsgEntry, thinkingEntry);
+    const card = createTurnCard(msg, modelName, teamMsgEntry, thinkingEntry, isNew);
 
     if (isNew) {
       card.classList.add("turn-card-enter", "turn-card-highlight");
@@ -317,10 +389,23 @@ function renderTranscript(d) {
   renderedMsgIds = nextIds;
 
   if (advancing) {
-    const placeholder = document.createElement("div");
-    placeholder.className = "turn-card";
-    placeholder.innerHTML = `<div class="turn-card-header"><span class="turn-model-name" style="color:var(--text-muted)">Thinking…</span></div><div class="argument-body"><span class="typing-dots"><span></span><span></span><span></span></span></div>`;
-    (activeDebate.factionA ? factionATurns : factionBTurns).appendChild(placeholder);
+    const nextSpeaker = getNextSpeaker(activeDebate, transcript);
+    if (nextSpeaker) {
+      const placeholder = document.createElement("div");
+      placeholder.className = "turn-card";
+      placeholder.innerHTML = `
+        <div class="turn-card-header">
+          <span class="turn-model-name">${nextSpeaker.modelName}</span>
+          <span class="turn-round-badge">R${nextSpeaker.round} <span class="typing-dots" style="margin-left: 2px;"><span></span><span></span><span></span></span></span>
+        </div>
+        <div class="argument-body" style="color: var(--ink-faded);">
+          <div style="display:flex; gap:8px; align-items:center;">
+             <span>Thinking</span>
+             <span class="typing-dots"><span></span><span></span><span></span></span>
+          </div>
+        </div>`;
+      (nextSpeaker.faction === "A" ? factionATurns : factionBTurns).appendChild(placeholder);
+    }
   }
 
   // smooth-scroll to new cards, or snap for initial load
@@ -346,7 +431,7 @@ function getModelName(modelId) {
   return m ? m.name : modelId;
 }
 
-function createTurnCard(msg, modelName, teamMsgEntry, thinkingEntry) {
+function createTurnCard(msg, modelName, teamMsgEntry, thinkingEntry, isNew = false) {
   const card = document.createElement("div");
   card.className = "turn-card";
 
@@ -370,7 +455,14 @@ function createTurnCard(msg, modelName, teamMsgEntry, thinkingEntry) {
 
   const argEl = document.createElement("div");
   argEl.className = "argument-body";
-  argEl.innerHTML = marked.parse(msg.argument || "");
+  
+  const parsedHtml = marked.parse(msg.argument || "");
+  if (isNew) {
+    streamHtml(argEl, parsedHtml);
+  } else {
+    argEl.innerHTML = parsedHtml;
+  }
+  
   card.appendChild(argEl);
 
   if (teamMsgEntry?.teamMessage) {
@@ -793,7 +885,9 @@ function downloadFile(content, filename, type) {
 function exportToJSON() {
   if (!activeDebate) return;
   
-  const debateExport = JSON.parse(JSON.stringify(activeDebate));
+  const debateData = { ...activeDebate };
+  delete debateData.blocks;
+  const debateExport = JSON.parse(JSON.stringify(debateData));
   const incThinking = exportIncThinking.checked;
   const incTeamMsg = exportIncTeamMsg.checked;
   
