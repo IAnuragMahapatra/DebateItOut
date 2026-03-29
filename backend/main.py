@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-import re
+
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -33,12 +33,14 @@ def load_models() -> list[dict]:
     global_max_tokens = int(os.getenv("MAX_TOKENS", "16384"))
 
     for key, value in os.environ.items():
-        m = re.match(r"^MODEL_(.+?)_(.+)$", key)
-        if not m:
+        if not key.startswith("MODEL_"):
             continue
-        model_id, field = m.group(1), m.group(2)
+        parts = key[len("MODEL_"):].rsplit("_", 1)
+        if len(parts) != 2:
+            continue
+        model_id, field = parts[0], parts[1]
         if model_id not in models:
-            models[model_id] = {"id": model_id.lower()}
+            models[model_id] = {"id": model_id.lower().replace("_", "-")}
         mapped = FIELD_MAP.get(field)
         if mapped:
             models[model_id][mapped] = int(value) if field == "MAX_TOKENS" else value
