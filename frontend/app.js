@@ -11,6 +11,7 @@ let editingDebateId = null;
 let confirmDeleteId = null;
 let advancing = false;
 let renderedMsgIds = new Set();
+let initialRenderDone = false;
 
 const $ = (sel, ctx = document) => ctx.querySelector(sel);
 const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
@@ -111,7 +112,7 @@ function streamHtml(element, html) {
   
   const textNodes = [];
   function walk(node) {
-    if (node.nodeType === Node.TEXT_NODE && node.nodeValue.trim().length > 0) {
+    if (node.nodeType === 3 && node.nodeValue.trim().length > 0) {
       textNodes.push(node);
     } else {
       for (let i = 0; i < node.childNodes.length; i++) walk(node.childNodes[i]);
@@ -369,7 +370,7 @@ function renderTranscript(d) {
     const teamMsgEntry = privateData.teamMessages?.find(t => t.round === msg.round && t.modelId === msg.modelId);
     const thinkingEntry = privateData.thinking?.find(t => t.round === msg.round && t.modelId === msg.modelId);
 
-    const isNew = prevIds.size > 0 && !prevIds.has(msg.id);
+    const isNew = initialRenderDone && !prevIds.has(msg.id);
     const card = createTurnCard(msg, modelName, teamMsgEntry, thinkingEntry, isNew);
 
     if (isNew) {
@@ -408,13 +409,10 @@ function renderTranscript(d) {
     }
   }
 
-  // smooth-scroll to new cards, or snap for initial load
   if (newCards.length > 0) {
     requestAnimationFrame(() => {
-      const first = newCards[0];
-      first.scrollIntoView({ behavior: "smooth", block: "start" });
+      newCards[0].scrollIntoView({ behavior: "smooth", block: "start" });
     });
-    // remove highlight after 2s so the border color transitions back
     setTimeout(() => {
       for (const c of newCards) c.classList.remove("turn-card-highlight");
     }, 2000);
@@ -423,6 +421,7 @@ function renderTranscript(d) {
     factionBTurns.scrollTop = factionBTurns.scrollHeight;
   }
 
+  initialRenderDone = true;
   requestAnimationFrame(drawConnectors);
 }
 
@@ -524,6 +523,7 @@ async function switchDebate(id) {
   activeDebateId = id;
   activeDebate = null;
   renderedMsgIds = new Set();
+  initialRenderDone = false;
   renderSidebar();
   renderDebateView();
   try {
@@ -591,6 +591,7 @@ async function advanceTurn() {
 
   advancing = true;
   renderControlBar(activeDebate.status);
+  renderDebateView();
   log(isRetry ? "Retrying last turn…" : `Round ${activeDebate.currentRound} — requesting next speaker…`);
 
   try {
