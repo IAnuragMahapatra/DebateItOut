@@ -126,8 +126,8 @@ function streamHtml(element, html) {
   
   let nodeIdx = 0;
   let charIdx = 0;
-  // Target 1.5s total duration (~90 frames)
-  const charsPerFrame = Math.max(2, Math.ceil(totalChars / 90));
+  // Target ~3 seconds total duration (~180 frames)
+  const charsPerFrame = Math.max(1, Math.ceil(totalChars / 180));
   
   function tick() {
     if (nodeIdx >= textNodes.length) return;
@@ -317,7 +317,7 @@ function renderControlBar(status) {
     advanceBtn.textContent = "Advance Turn";
     advanceBtn.disabled = false;
   } else if (status === "turn_in_progress" || advancing) {
-    advanceBtn.innerHTML = `Working <span class="typing-dots"><span></span><span></span><span></span></span>`;
+    advanceBtn.innerHTML = `<span class="spinner" style="font-size:12px; margin-right:4px;">⏳</span> Generating`;
     advanceBtn.disabled = true;
   } else if (status === "error") {
     advanceBtn.className = "advance-btn error";
@@ -397,7 +397,7 @@ function renderTranscript(d) {
       placeholder.innerHTML = `
         <div class="turn-card-header">
           <span class="turn-model-name">${nextSpeaker.modelName}</span>
-          <span class="turn-round-badge">R${nextSpeaker.round} <span class="typing-dots" style="margin-left: 2px;"><span></span><span></span><span></span></span></span>
+          <span class="turn-round-badge">R${nextSpeaker.round}</span>
         </div>
         <div class="argument-body" style="color: var(--ink-faded);">
           <div style="display:flex; gap:8px; align-items:center;">
