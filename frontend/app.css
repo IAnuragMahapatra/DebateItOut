@@ -512,7 +512,8 @@ body {
   min-height: 0;
 }
 
-#connector-overlay { display: block; }
+/* connector overlay disabled — coordinate math needs scroll-offset fix before enabling */
+#connector-overlay { display: none; }
 
 .faction-column.faction-a .faction-models,
 .faction-column.faction-a .faction-turns {
