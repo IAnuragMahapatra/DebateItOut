@@ -114,7 +114,7 @@ async def create_debate(
     max_rounds: int = 6,
 ) -> dict:
     now = int(time.time() * 1000)
-    async with _pool_conn() as conn:
+    async with pool_conn() as conn:
         await conn.execute(
             """
             INSERT INTO debates
@@ -145,7 +145,7 @@ async def create_debate(
 
 
 async def get_all_debates() -> list[dict]:
-    async with _pool_conn() as conn:
+    async with pool_conn() as conn:
         rows = await conn.fetch(
             """
             SELECT d.*, COUNT(m.id) AS turn_count
@@ -165,7 +165,7 @@ async def get_all_debates() -> list[dict]:
 
 
 async def get_debate(debate_id: str) -> dict | None:
-    async with _pool_conn() as conn:
+    async with pool_conn() as conn:
         row = await conn.fetchrow(
             "SELECT * FROM debates WHERE id = $1", debate_id
         )
@@ -204,13 +204,13 @@ async def update_debate(debate_id: str, updates: dict) -> dict | None:
     values.append(debate_id)
 
     sql = f"UPDATE debates SET {', '.join(fields)} WHERE id = ${param} RETURNING *"
-    async with _pool_conn() as conn:
+    async with pool_conn() as conn:
         row = await conn.fetchrow(sql, *values)
     return _debate_row_to_dict(row) if row else None
 
 
 async def delete_debate(debate_id: str) -> bool:
-    async with _pool_conn() as conn:
+    async with pool_conn() as conn:
         result = await conn.execute(
             "DELETE FROM debates WHERE id = $1", debate_id
         )
@@ -240,7 +240,7 @@ async def set_debate_status(
 # --- message CRUD ---
 
 async def get_messages(debate_id: str) -> list[dict]:
-    async with _pool_conn() as conn:
+    async with pool_conn() as conn:
         rows = await conn.fetch(
             """
             SELECT * FROM messages
@@ -263,7 +263,7 @@ async def insert_message(
     latency: int | None = None,
 ) -> dict:
     now = int(time.time() * 1000)
-    async with _pool_conn() as conn:
+    async with pool_conn() as conn:
         row = await conn.fetchrow(
             """
             INSERT INTO messages
