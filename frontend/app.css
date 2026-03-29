@@ -1169,6 +1169,13 @@ body {
   border-color: var(--faction-border);
 }
 
+.model-pick-btn.disabled,
+.model-pick-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }

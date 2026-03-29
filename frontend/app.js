@@ -752,18 +752,23 @@ function closeNewDebateView() {
 }
 
 function renderPickers() {
-  renderPicker(factionAPicker, selectedA, "A");
-  renderPicker(factionBPicker, selectedB, "B");
+  renderPicker(factionAPicker, selectedA, "A", selectedB);
+  renderPicker(factionBPicker, selectedB, "B", selectedA);
 }
 
-function renderPicker(container, selected, faction) {
+function renderPicker(container, selected, faction, opposing) {
   container.innerHTML = "";
   for (const m of models) {
     const btn = document.createElement("button");
-    btn.className = "model-pick-btn" + (selected.includes(m.id) ? " selected" : "");
+    const isSelected = selected.includes(m.id);
+    const isTaken = opposing.includes(m.id);
+    btn.className = "model-pick-btn" + (isSelected ? " selected" : "") + (isTaken ? " disabled" : "");
     btn.textContent = m.name;
     btn.type = "button";
+    btn.disabled = isTaken;
+    btn.title = isTaken ? "Already selected in the opposing faction" : "";
     btn.addEventListener("click", () => {
+      if (isTaken) return;
       if (faction === "A") {
         selectedA = toggleInArray(selectedA, m.id);
       } else {
