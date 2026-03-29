@@ -23,8 +23,8 @@ const sidebarSearch    = $("#sidebar-search");
 const mobileToggle     = $("#mobile-toggle");
 const sidebarToggle    = $("#sidebar-toggle");
 const newDebateBtn     = $("#new-debate-btn");
-const emptyState       = $("#empty-state");
-const emptyNewBtn      = $("#empty-new-btn");
+const homeState        = $("#home-state");
+const homeNewBtn       = $("#home-new-btn");
 const debateView       = $("#debate-view");
 const debateHeader     = $("#debate-header");
 const debateRoundIndicator = $("#debate-round-indicator");
@@ -263,13 +263,13 @@ function renderSidebar() {
 
 function renderDebateView() {
   if (!activeDebate) {
-    emptyState.style.display = debates.length === 0 ? "flex" : "none";
-    newDebateView.style.display = debates.length === 0 ? "none" : "none";
+    homeState.style.display = "flex";
+    newDebateView.style.display = "none";
     debateView.style.display = "none";
     return;
   }
 
-  emptyState.style.display = "none";
+  homeState.style.display = "none";
   newDebateView.style.display = "none";
   debateView.style.display = "flex";
 
@@ -716,6 +716,18 @@ $("#faction-b-turns").addEventListener("scroll", redrawConnectors);
 let selectedA = [];
 let selectedB = [];
 
+function showHomeState() {
+  activeDebateId = null;
+  activeDebate = null;
+  
+  homeState.style.display = "flex";
+  debateView.style.display = "none";
+  newDebateView.style.display = "none";
+  
+  // Also clear active state from sidebar items if any
+  document.querySelectorAll(".debate-item.active").forEach(el => el.classList.remove("active"));
+}
+
 function showNewDebateView() {
   selectedA = [];
   selectedB = [];
@@ -728,7 +740,7 @@ function showNewDebateView() {
   activeDebateId = null;
   activeDebate = null;
   
-  emptyState.style.display = "none";
+  homeState.style.display = "none";
   debateView.style.display = "none";
   newDebateView.style.display = "flex";
   
@@ -741,7 +753,7 @@ function closeNewDebateView() {
     loadDebate(activeDebateId).catch(console.error);
   } else {
     newDebateView.style.display = "none";
-    emptyState.style.display = "flex";
+    homeState.style.display = "flex";
   }
 }
 
@@ -837,8 +849,8 @@ sidebarToggle.addEventListener("click", () => { sidebarOpen ? closeSidebar() : o
 sidebarOverlay.addEventListener("click", closeSidebar);
 mobileToggle.addEventListener("click", openSidebar);
 
-newDebateBtn.addEventListener("click", showNewDebateView);
-emptyNewBtn.addEventListener("click", showNewDebateView);
+newDebateBtn.addEventListener("click", showHomeState);
+homeNewBtn.addEventListener("click", showNewDebateView);
 
 sidebarSearch.addEventListener("input", e => { searchQuery = e.target.value; renderSidebar(); });
 
@@ -878,10 +890,10 @@ async function init() {
   try {
     await Promise.all([fetchDebates(), fetchModels()]);
   } catch {
-    emptyState.style.display = "flex";
+    homeState.style.display = "flex";
     debateView.style.display = "none";
     newDebateView.style.display = "none";
-    const sub = emptyState.querySelector(".empty-sub");
+    const sub = homeState.querySelector(".home-sub");
     if (sub) sub.textContent = "Could not connect to backend. Is the server running?";
     renderPickers();
     return;
@@ -890,23 +902,13 @@ async function init() {
   renderSidebar();
   renderPickers();
 
-  if (debates.length > 0) {
-    activeDebateId = sortedDebates()[0].id;
-    try {
-      await loadDebate(activeDebateId);
-    } catch (err) {
-      console.error("Failed to load first debate:", err);
-    }
-  }
-
-  renderDebateView();
-
-  // redraw connectors when collapsible blocks expand/collapse
   document.addEventListener('toggle', (e) => {
     if (e.target.matches('details.collapsible-block')) {
       setTimeout(drawConnectors, 20);
     }
   }, true);
+
+  showHomeState();
 }
 
 function downloadFile(content, filename, type) {
