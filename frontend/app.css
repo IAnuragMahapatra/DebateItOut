@@ -512,8 +512,13 @@ body {
   min-height: 0;
 }
 
-/* connector overlay disabled — coordinate math needs scroll-offset fix before enabling */
-#connector-overlay { display: none; }
+/* position:fixed so its coord space matches getBoundingClientRect() */
+#connector-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
 
 .faction-column.faction-a .faction-models,
 .faction-column.faction-a .faction-turns {

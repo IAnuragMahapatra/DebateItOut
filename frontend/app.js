@@ -627,10 +627,28 @@ function drawConnectors() {
   if (!connectorOverlay || !activeDebate || !activeDebate.blocks) return;
   connectorOverlay.innerHTML = "";
 
-  const debateAreaRect = $("#debate-area").getBoundingClientRect();
-  const blocks = activeDebate.blocks;
+  const areaEl = $("#debate-area");
+  if (!areaEl) return;
+  const areaRect = areaEl.getBoundingClientRect();
+
+  // clip to the debate area so lines don't bleed into sidebar or header
+  const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+  const clip = document.createElementNS("http://www.w3.org/2000/svg", "clipPath");
+  clip.setAttribute("id", "debate-area-clip");
+  const clipRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  clipRect.setAttribute("x", areaRect.left);
+  clipRect.setAttribute("y", areaRect.top);
+  clipRect.setAttribute("width", areaRect.width);
+  clipRect.setAttribute("height", areaRect.height);
+  clip.appendChild(clipRect);
+  defs.appendChild(clip);
+  connectorOverlay.appendChild(defs);
+
+  const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  g.setAttribute("clip-path", "url(#debate-area-clip)");
 
   const strokeColor = "oklch(35% 0.01 60 / 0.5)";
+  const blocks = activeDebate.blocks;
 
   for (let i = 1; i < blocks.length; i++) {
     const prevBlock = blocks[i - 1];
@@ -642,42 +660,30 @@ function drawConnectors() {
     const lastPrevCard = prevBlock.cards[prevBlock.cards.length - 1].getBoundingClientRect();
     const firstCurrCard = currBlock.cards[0].getBoundingClientRect();
 
+    // skip block pairs that are entirely outside the visible debate area
+    if (lastPrevCard.bottom < areaRect.top || firstPrevCard.top > areaRect.bottom) continue;
+    if (firstCurrCard.bottom < areaRect.top || firstCurrCard.top > areaRect.bottom) continue;
+
     const isPrevA = prevBlock.faction === "A";
 
-    const prevTop = firstPrevCard.top - debateAreaRect.top;
-    const prevBottom = lastPrevCard.bottom - debateAreaRect.top;
-    const currTop = firstCurrCard.top - debateAreaRect.top + 20;
+    // raw viewport coords — matches position:fixed SVG directly
+    const prevTop = firstPrevCard.top;
+    const prevBottom = lastPrevCard.bottom;
+    const currTop = firstCurrCard.top + 20;
 
+    const bracketDepth = 8;
     let pathD = "";
 
     if (isPrevA) {
-      const startX = firstPrevCard.right - debateAreaRect.left + 4;
-      const endX = firstCurrCard.left - debateAreaRect.left - 4;
+      const startX = firstPrevCard.right + 4;
+      const endX = firstCurrCard.left - 4;
       const midY = (prevTop + prevBottom) / 2;
-      const bracketDepth = 8;
-
-      pathD = `
-        M ${startX} ${prevTop}
-        L ${startX + bracketDepth} ${prevTop}
-        L ${startX + bracketDepth} ${prevBottom}
-        L ${startX} ${prevBottom}
-        M ${startX + bracketDepth} ${midY}
-        L ${endX} ${currTop}
-      `;
+      pathD = `M ${startX} ${prevTop} L ${startX + bracketDepth} ${prevTop} L ${startX + bracketDepth} ${prevBottom} L ${startX} ${prevBottom} M ${startX + bracketDepth} ${midY} L ${endX} ${currTop}`;
     } else {
-      const startX = firstPrevCard.left - debateAreaRect.left - 4;
-      const endX = firstCurrCard.right - debateAreaRect.left + 4;
+      const startX = firstPrevCard.left - 4;
+      const endX = firstCurrCard.right + 4;
       const midY = (prevTop + prevBottom) / 2;
-      const bracketDepth = 8;
-
-      pathD = `
-        M ${startX} ${prevTop}
-        L ${startX - bracketDepth} ${prevTop}
-        L ${startX - bracketDepth} ${prevBottom}
-        L ${startX} ${prevBottom}
-        M ${startX - bracketDepth} ${midY}
-        L ${endX} ${currTop}
-      `;
+      pathD = `M ${startX} ${prevTop} L ${startX - bracketDepth} ${prevTop} L ${startX - bracketDepth} ${prevBottom} L ${startX} ${prevBottom} M ${startX - bracketDepth} ${midY} L ${endX} ${currTop}`;
     }
 
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
@@ -685,8 +691,10 @@ function drawConnectors() {
     path.setAttribute("stroke", strokeColor);
     path.setAttribute("stroke-width", "1.5");
     path.setAttribute("fill", "none");
-    connectorOverlay.appendChild(path);
+    g.appendChild(path);
   }
+
+  connectorOverlay.appendChild(g);
 }
 
 function debounce(fn, ms) {
@@ -699,6 +707,10 @@ const redrawConnectors = debounce(() => requestAnimationFrame(drawConnectors), 1
 const resizeObserver = new ResizeObserver(redrawConnectors);
 resizeObserver.observe($("#debate-area"));
 window.addEventListener("resize", redrawConnectors);
+
+// faction-turns scroll independently — redraw so connectors track card positions
+$("#faction-a-turns").addEventListener("scroll", redrawConnectors);
+$("#faction-b-turns").addEventListener("scroll", redrawConnectors);
 
 let selectedA = [];
 let selectedB = [];
