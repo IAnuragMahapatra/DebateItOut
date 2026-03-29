@@ -748,13 +748,7 @@ function showNewDebateView() {
 }
 
 function closeNewDebateView() {
-  if (debates.length > 0) {
-    activeDebateId = sortedDebates()[0].id;
-    loadDebate(activeDebateId).catch(console.error);
-  } else {
-    newDebateView.style.display = "none";
-    homeState.style.display = "flex";
-  }
+  showHomeState();
 }
 
 function renderPickers() {
