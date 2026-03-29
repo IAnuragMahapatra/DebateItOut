@@ -317,7 +317,7 @@ function renderControlBar(status) {
     advanceBtn.textContent = "Advance Turn";
     advanceBtn.disabled = false;
   } else if (status === "turn_in_progress" || advancing) {
-    advanceBtn.innerHTML = `<span class="spinner" style="font-size:12px; margin-right:4px;">⏳</span> Generating`;
+    advanceBtn.innerHTML = `Waiting...`;
     advanceBtn.disabled = true;
   } else if (status === "error") {
     advanceBtn.className = "advance-btn error";
