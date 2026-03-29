@@ -31,13 +31,13 @@ async def chat_anthropic(model: dict, system: str, messages: list[dict]) -> dict
             },
         )
 
+    response.raise_for_status()
     data = response.json()
 
     if "error" in data:
         err = data["error"]
         msg = err.get("message") if isinstance(err, dict) else str(err)
-        print(f"[{model['name']}] API error: {json.dumps(err)}")
-        return {"reply": f"API Error: {msg}", "thinking": None}
+        raise ValueError(f"Model error: {msg}")
 
     content: list = data.get("content", [])
     text_block = next((c for c in content if c.get("type") == "text"), None)
@@ -69,13 +69,13 @@ async def chat_openai(model: dict, messages: list[dict]) -> dict:
             },
         )
 
+    response.raise_for_status()
     data = response.json()
 
     if "error" in data:
         err = data["error"]
         msg = err.get("message") if isinstance(err, dict) else str(err)
-        print(f"[{model['name']}] API error: {json.dumps(err)}")
-        return {"reply": f"API Error: {msg}", "thinking": None}
+        raise ValueError(f"Model error: {msg}")
 
     choice = (data.get("choices") or [{}])[0]
     content = (choice.get("message") or {}).get("content")
@@ -93,3 +93,4 @@ async def dispatch(model: dict, system: str, messages: list[dict]) -> dict:
     # OpenAI-compatible endpoints take system as the first message
     full_messages = [{"role": "system", "content": system}] + messages
     return await chat_openai(model, full_messages)
+
