@@ -61,10 +61,15 @@ body {
   height: 3px;
   background: var(--ink-faded);
   transform-origin: 0 50%;
-  animation: scrollProgress linear;
-  animation-timeline: scroll(root);
   z-index: 1000;
   pointer-events: none;
+}
+
+@supports (animation-timeline: scroll()) {
+  .scroll-progress {
+    animation: scrollProgress linear;
+    animation-timeline: scroll(root);
+  }
 }
 
 @keyframes scrollProgress {
@@ -507,7 +512,7 @@ body {
   min-height: 0;
 }
 
-#connector-overlay { display: none !important; }
+#connector-overlay { display: block; }
 
 .faction-column.faction-a .faction-models,
 .faction-column.faction-a .faction-turns {
@@ -530,10 +535,44 @@ body {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   padding: 10px 16px;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
 }
 
 .faction-b .faction-header {
   background: var(--faction-b);
+}
+
+.faction-label {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+}
+
+/* inside a faction-header the label inherits the header colour */
+.faction-header .faction-label {
+  color: inherit;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+}
+
+.faction-stance {
+  font-family: var(--font-serif, var(--font-body));
+  font-style: italic;
+  font-size: 0.8rem;
+  color: var(--ink-faded);
+}
+
+/* inside a faction-header stance uses header tint */
+.faction-header .faction-stance {
+  color: oklch(from var(--faction-text) l c h / 0.7);
+  font-size: 0.72rem;
 }
 
 .faction-models {
@@ -817,6 +856,13 @@ body {
   .advance-btn:not(:disabled):hover { opacity: 0.88; transform: translateY(-1px); }
 }
 
+.advance-btn:focus-visible,
+.model-pick-btn:focus-visible,
+.item-action-btn:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
 .advance-btn:active:not(:disabled) { transform: scale(0.97); }
 
 .advance-btn:disabled {
@@ -868,11 +914,25 @@ body {
   min-height: 44px;
 }
 
-@media (hover: hover) and (pointer: fine) {
-  .btn-ghost:hover { color: var(--ink); }
+.btn-ghost-sm {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  padding: 0.2rem 0.6rem;
+  min-height: 28px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--ink-faded);
+  cursor: pointer;
+  transition: color 150ms var(--ease-out);
 }
 
-.btn-ghost:active { transform: scale(0.97); }
+@media (hover: hover) and (pointer: fine) {
+  .btn-ghost:hover, .btn-ghost-sm:hover { color: var(--ink); }
+}
+
+.btn-ghost:active, .btn-ghost-sm:active { transform: scale(0.97); }
 
 .modal-overlay {
   position: fixed;
@@ -1076,6 +1136,7 @@ body {
   .debate-area {
     grid-template-columns: 1fr;
     border-top: 2px solid var(--border);
+    overflow-y: auto;
   }
   .faction-column.faction-a { border-right: none; }
   .faction-column.faction-a .faction-models,

@@ -455,7 +455,7 @@ function createTurnCard(msg, modelName, teamMsgEntry, thinkingEntry, isNew = fal
   const argEl = document.createElement("div");
   argEl.className = "argument-body";
   
-  const parsedHtml = marked.parse(msg.argument || "");
+  const parsedHtml = DOMPurify.sanitize(marked.parse(msg.argument || ""));
   if (isNew) {
     streamHtml(argEl, parsedHtml);
   } else {
@@ -471,7 +471,7 @@ function createTurnCard(msg, modelName, teamMsgEntry, thinkingEntry, isNew = fal
     summary.textContent = "Team message";
     const content = document.createElement("div");
     content.className = "collapsible-content";
-    content.innerHTML = marked.parse(teamMsgEntry.teamMessage);
+    content.innerHTML = DOMPurify.sanitize(marked.parse(teamMsgEntry.teamMessage));
     details.append(summary, content);
     card.appendChild(details);
   }
@@ -483,7 +483,7 @@ function createTurnCard(msg, modelName, teamMsgEntry, thinkingEntry, isNew = fal
     summary.textContent = "Thinking";
     const content = document.createElement("div");
     content.className = "collapsible-content";
-    content.innerHTML = marked.parse(thinkingEntry.thinking);
+    content.innerHTML = DOMPurify.sanitize(marked.parse(thinkingEntry.thinking));
     details.append(summary, content);
     card.appendChild(details);
   }
@@ -504,11 +504,7 @@ async function fetchDebates() {
 }
 
 async function fetchModels() {
-  try {
-    models = await api("/models");
-  } catch {
-    models = [];
-  }
+  models = await api("/models");
 }
 
 async function loadDebate(id) {
@@ -847,7 +843,16 @@ document.addEventListener("keydown", e => {
 });
 
 async function init() {
-  await Promise.all([fetchDebates(), fetchModels()]);
+  try {
+    await Promise.all([fetchDebates(), fetchModels()]);
+  } catch {
+    emptyState.style.display = "";
+    debateView.style.display = "none";
+    const sub = emptyState.querySelector(".empty-sub");
+    if (sub) sub.textContent = "Could not connect to backend. Is the server running?";
+    renderPickers();
+    return;
+  }
 
   renderSidebar();
   renderPickers();
