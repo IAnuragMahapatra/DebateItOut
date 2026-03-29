@@ -128,6 +128,13 @@ async def create_debate_endpoint(request: Request):
         if mid not in known_ids:
             raise HTTPException(400, f"Unknown model ID: {mid}")
 
+    if len(a_models) != len(set(a_models)):
+        raise HTTPException(400, "Duplicate models in factionA")
+    if len(b_models) != len(set(b_models)):
+        raise HTTPException(400, "Duplicate models in factionB")
+    if set(a_models) & set(b_models):
+        raise HTTPException(400, "A model cannot appear in both factions")
+
     if not (1 <= max_rounds <= 20):
         raise HTTPException(400, "maxRounds must be between 1 and 20")
 
