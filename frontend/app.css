@@ -601,10 +601,38 @@ body {
   border-top: 2px solid var(--border);
   padding: 16px 24px 12px;
   flex-shrink: 0;
+  transition: border-color 600ms var(--ease-out);
 }
 
 .turn-card:first-child {
   border-top: none;
+}
+
+.turn-card-enter {
+  animation: cardEnter 400ms var(--ease-out) both;
+}
+
+@keyframes cardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.turn-card-highlight {
+  border-top-color: var(--highlight-color, var(--border));
+}
+
+.faction-a .turn-card-highlight {
+  --highlight-color: var(--faction-a);
+}
+
+.faction-b .turn-card-highlight {
+  --highlight-color: var(--faction-b);
 }
 
 .turn-card-header {

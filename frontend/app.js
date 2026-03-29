@@ -10,6 +10,7 @@ let searchQuery = "";
 let editingDebateId = null;
 let confirmDeleteId = null;
 let advancing = false;
+let renderedMsgIds = new Set();
 
 const $ = (sel, ctx = document) => ctx.querySelector(sel);
 const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
@@ -263,11 +264,15 @@ function renderTranscript(d) {
   const aPrivate = d.factionAPrivate || { teamMessages: [], thinking: [] };
   const bPrivate = d.factionBPrivate || { teamMessages: [], thinking: [] };
 
+  const prevIds = renderedMsgIds;
+  const nextIds = new Set(transcript.map(m => m.id));
+
   factionATurns.innerHTML = "";
   factionBTurns.innerHTML = "";
 
   const seenRoundsA = new Set();
   const seenRoundsB = new Set();
+  const newCards = [];
 
   activeDebate.blocks = [];
   let currentBlock = null;
@@ -292,7 +297,14 @@ function renderTranscript(d) {
     const teamMsgEntry = privateData.teamMessages?.find(t => t.round === msg.round && t.modelId === msg.modelId);
     const thinkingEntry = privateData.thinking?.find(t => t.round === msg.round && t.modelId === msg.modelId);
 
+    const isNew = prevIds.size > 0 && !prevIds.has(msg.id);
     const card = createTurnCard(msg, modelName, teamMsgEntry, thinkingEntry);
+
+    if (isNew) {
+      card.classList.add("turn-card-enter", "turn-card-highlight");
+      newCards.push(card);
+    }
+
     container.appendChild(card);
 
     if (!currentBlock || currentBlock.faction !== msg.faction) {
@@ -302,6 +314,8 @@ function renderTranscript(d) {
     currentBlock.cards.push(card);
   }
 
+  renderedMsgIds = nextIds;
+
   if (advancing) {
     const placeholder = document.createElement("div");
     placeholder.className = "turn-card";
@@ -309,8 +323,20 @@ function renderTranscript(d) {
     (activeDebate.factionA ? factionATurns : factionBTurns).appendChild(placeholder);
   }
 
-  factionATurns.scrollTop = factionATurns.scrollHeight;
-  factionBTurns.scrollTop = factionBTurns.scrollHeight;
+  // smooth-scroll to new cards, or snap for initial load
+  if (newCards.length > 0) {
+    requestAnimationFrame(() => {
+      const first = newCards[0];
+      first.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    // remove highlight after 2s so the border color transitions back
+    setTimeout(() => {
+      for (const c of newCards) c.classList.remove("turn-card-highlight");
+    }, 2000);
+  } else {
+    factionATurns.scrollTop = factionATurns.scrollHeight;
+    factionBTurns.scrollTop = factionBTurns.scrollHeight;
+  }
 
   requestAnimationFrame(drawConnectors);
 }
@@ -405,6 +431,7 @@ async function switchDebate(id) {
   if (id === activeDebateId) return;
   activeDebateId = id;
   activeDebate = null;
+  renderedMsgIds = new Set();
   renderSidebar();
   renderDebateView();
   try {
