@@ -400,20 +400,22 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  overflow-y: auto;
-  padding: 2rem;
+  overflow: hidden;
+  padding: 2vh 2vw;
 }
 
 .new-debate-container {
-  width: 100%;
-  max-width: 1000px;
+  width: 75vw;
+  max-width: 1600px;
+  max-height: 96vh;
   margin: auto;
   background: var(--bg);
   border: 1px solid var(--border);
-  padding: 32px;
+  padding: 24px 32px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
+  overflow: hidden;
 }
 
 .new-debate-title {
@@ -495,12 +497,12 @@ body {
   word-break: break-word;
 }
 
-.debate-header-right { 
-  display: flex; 
-  align-items: center; 
-  gap: 0.4rem; 
-  flex: 1; 
-  justify-content: flex-end; 
+.debate-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1;
+  justify-content: flex-end;
 }
 
 .header-action-btn {
@@ -1147,26 +1149,44 @@ body {
 .model-picker {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
+  gap: 0.45rem;
+  padding: 0.5rem 0;
 }
 
 .model-pick-btn {
-  font-size: 0.72rem;
-  font-family: inherit;
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
   font-weight: 500;
-  padding: 0.22rem 0.55rem;
+  padding: 0.35rem 0.65rem;
   border: 1px solid var(--border);
-  background: transparent;
+  background: var(--surface);
   color: var(--ink-faded);
   cursor: pointer;
-  transition: background 120ms var(--ease-out), color 120ms var(--ease-out), border-color 120ms var(--ease-out);
+  transition: transform 150ms var(--ease-out), background 150ms var(--ease-out), color 150ms var(--ease-out), border-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
   user-select: none;
+  animation: fadeUp 400ms var(--ease-out) both;
+  box-shadow: 1px 1px 0px rgba(0,0,0,0.04);
+  display: inline-flex;
+  align-items: center;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .model-pick-btn:not(:disabled):not(.selected):hover {
+    transform: translateY(-1px);
+    box-shadow: 2px 2px 0px rgba(0,0,0,0.1);
+    border-color: var(--ink);
+    color: var(--ink);
+    background: var(--bg);
+  }
 }
 
 .faction-builder .model-pick-btn.selected {
-  background: var(--faction-subtle);
-  color: var(--ink);
-  border-color: var(--faction-border);
+  background: var(--faction-color);
+  color: var(--faction-text);
+  border-color: var(--faction-color);
+  font-weight: 600;
+  transform: translateY(-1px);
+  box-shadow: 2px 2px 0px rgba(0,0,0,0.15);
 }
 
 .model-pick-btn.disabled,
@@ -1174,6 +1194,8 @@ body {
   opacity: 0.35;
   cursor: not-allowed;
   text-decoration: line-through;
+  background: transparent;
+  box-shadow: none;
 }
 
 @keyframes fadeUp {

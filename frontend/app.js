@@ -735,6 +735,8 @@ function showNewDebateView() {
   factionAStanceInput.value = "for";
   factionBStanceInput.value = "against";
   maxRoundsInput.value = "6";
+  factionAPicker.innerHTML = "";
+  factionBPicker.innerHTML = "";
   renderPickers();
   
   activeDebateId = null;
@@ -757,26 +759,43 @@ function renderPickers() {
 }
 
 function renderPicker(container, selected, faction, opposing) {
-  container.innerHTML = "";
-  for (const m of models) {
-    const btn = document.createElement("button");
-    const isSelected = selected.includes(m.id);
-    const isTaken = opposing.includes(m.id);
+  if (container.children.length === 0) {
+    let delay = 0;
+    for (const m of models) {
+      const btn = document.createElement("button");
+      btn.dataset.id = m.id;
+      btn.type = "button";
+      btn.style.animationDelay = `${delay}ms`;
+      delay += 25;
+      
+      btn.addEventListener("click", () => {
+        if (btn.disabled) return;
+        if (faction === "A") {
+          selectedA = toggleInArray(selectedA, m.id);
+        } else {
+          selectedB = toggleInArray(selectedB, m.id);
+        }
+        renderPickers();
+      });
+      container.appendChild(btn);
+    }
+  }
+
+  for (const btn of container.children) {
+    const id = btn.dataset.id;
+    const m = models.find(x => x.id === id);
+    const isSelected = selected.includes(id);
+    const isTaken = opposing.includes(id);
+    
     btn.className = "model-pick-btn" + (isSelected ? " selected" : "") + (isTaken ? " disabled" : "");
-    btn.textContent = m.name;
-    btn.type = "button";
     btn.disabled = isTaken;
     btn.title = isTaken ? "Already selected in the opposing faction" : "";
-    btn.addEventListener("click", () => {
-      if (isTaken) return;
-      if (faction === "A") {
-        selectedA = toggleInArray(selectedA, m.id);
-      } else {
-        selectedB = toggleInArray(selectedB, m.id);
-      }
-      renderPickers();
-    });
-    container.appendChild(btn);
+    
+    if (isSelected) {
+      btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px; opacity:0.9;"><polyline points="20 6 9 17 4 12"></polyline></svg>${m.name}`;
+    } else {
+      btn.textContent = m.name;
+    }
   }
 }
 
