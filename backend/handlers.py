@@ -24,7 +24,7 @@ async def chat_anthropic(model: dict, system: str, messages: list[dict]) -> dict
             model["apiUrl"],
             headers=headers,
             json={
-                "model": model["model"],
+                "model": model["slug"],
                 "max_tokens": model["maxTokens"],
                 "system": system,
                 "messages": messages,
@@ -63,7 +63,7 @@ async def chat_openai(model: dict, messages: list[dict]) -> dict:
             model["apiUrl"],
             headers=headers,
             json={
-                "model": model["model"],
+                "model": model["slug"],
                 "messages": messages,
                 "max_tokens": model["maxTokens"],
             },

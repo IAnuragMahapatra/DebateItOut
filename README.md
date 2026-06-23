@@ -45,14 +45,14 @@ MODEL_CLAUDE_TYPE=anthropic
 MODEL_CLAUDE_API_URL=https://api.anthropic.com/v1/messages
 MODEL_CLAUDE_API_KEY=sk-ant-...
 MODEL_CLAUDE_ANTHROPIC_VERSION=2023-06-01
-MODEL_CLAUDE_MODEL=claude-opus-4-5
+MODEL_CLAUDE_SLUG=claude-opus-4-5
 
 # OpenAI-compatible (including Ollama)
 MODEL_DEEPSEEK_NAME=DeepSeek
 MODEL_DEEPSEEK_TYPE=openai
 MODEL_DEEPSEEK_API_URL=http://host.docker.internal:11434/v1/chat/completions
 MODEL_DEEPSEEK_API_KEY=ollama
-MODEL_DEEPSEEK_MODEL=deepseek-r1:14b
+MODEL_DEEPSEEK_SLUG=deepseek-r1:14b
 ```
 
 Add as many models as you need. They all appear in the faction builder.

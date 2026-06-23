@@ -23,7 +23,7 @@ FIELD_MAP = {
     "API_URL": "apiUrl",
     "API_KEY": "apiKey",
     "ANTHROPIC_VERSION": "anthropicVersion",
-    "MODEL": "model",
+    "SLUG": "slug",
     "MAX_TOKENS": "maxTokens",
 }
 
@@ -47,7 +47,7 @@ def load_models() -> list[dict]:
     for m in models.values():
         if not m.get("maxTokens"):
             m["maxTokens"] = global_max_tokens
-        if m.get("name") and m.get("type") and m.get("apiUrl") and m.get("model"):
+        if m.get("name") and m.get("type") and m.get("apiUrl") and m.get("slug"):
             result.append(m)
     return result
 
