@@ -12,6 +12,8 @@ let confirmDeleteId = null;
 let advancing = false;
 let renderedMsgIds = new Set();
 let initialRenderDone = false;
+let appConfig = { autoAdvance: false };
+let autoAdvanceEnabled = false;
 
 const $ = (sel, ctx = document) => ctx.querySelector(sel);
 const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
@@ -38,6 +40,7 @@ const factionATurns    = $("#faction-a-turns");
 const factionBTurns    = $("#faction-b-turns");
 const controlBar       = $("#control-bar");
 const advanceBtn       = $("#advance-btn");
+const autoToggleBtn    = $("#auto-toggle-btn");
 const headerRenameBtn  = $("#header-rename-btn");
 const exportBtn        = $("#export-btn");
 const exportModal      = $("#export-modal");
@@ -331,6 +334,13 @@ function renderControlBar(status) {
   } else {
     advanceBtn.disabled = true;
   }
+
+  if (appConfig.autoAdvance && status && status !== "concluded") {
+    autoToggleBtn.style.display = "inline-flex";
+    autoToggleBtn.textContent = autoAdvanceEnabled ? "Stop Auto" : "Resume Auto";
+  } else {
+    autoToggleBtn.style.display = "none";
+  }
 }
 
 function renderTranscript(d) {
@@ -508,6 +518,15 @@ async function fetchModels() {
   models = await api("/models");
 }
 
+async function fetchConfig() {
+  try {
+    appConfig = await api("/config");
+    autoAdvanceEnabled = appConfig.autoAdvance;
+  } catch (err) {
+    console.error("Failed to fetch config:", err);
+  }
+}
+
 async function loadDebate(id) {
   const d = await api(`/debates/${id}`);
   activeDebate = d;
@@ -526,6 +545,9 @@ async function switchDebate(id) {
   try {
     await loadDebate(id);
     renderDebateView();
+    if (autoAdvanceEnabled && activeDebate?.status === "active") {
+      setTimeout(advanceTurn, 1000);
+    }
   } catch (err) {
     log(`Failed to load debate: ${err.message}`, "error");
   }
@@ -583,6 +605,7 @@ async function executeDelete(id) {
 
 async function advanceTurn() {
   if (!activeDebate || advancing) return;
+  const currentDebateId = activeDebateId;
   const isRetry = activeDebate.status === "error";
   const endpoint = isRetry ? `/debates/${activeDebateId}/retry-turn` : `/debates/${activeDebateId}/turn`;
 
@@ -619,6 +642,10 @@ async function advanceTurn() {
     advancing = false;
     if (activeDebate) renderControlBar(activeDebate.status);
     requestAnimationFrame(drawConnectors);
+    
+    if (autoAdvanceEnabled && activeDebateId === currentDebateId && activeDebate?.status === "active") {
+      setTimeout(advanceTurn, 1000);
+    }
   }
 }
 
@@ -873,6 +900,13 @@ homeNewBtn.addEventListener("click", showNewDebateView);
 sidebarSearch.addEventListener("input", e => { searchQuery = e.target.value; renderSidebar(); });
 
 advanceBtn.addEventListener("click", advanceTurn);
+autoToggleBtn.addEventListener("click", () => {
+  autoAdvanceEnabled = !autoAdvanceEnabled;
+  if (activeDebate) renderControlBar(activeDebate.status);
+  if (autoAdvanceEnabled && activeDebate?.status === "active" && !advancing) {
+    advanceTurn();
+  }
+});
 headerRenameBtn.addEventListener("click", openRenameModal);
 
 exportBtn.addEventListener("click", () => { exportModal.style.display = "flex"; });
@@ -906,7 +940,7 @@ document.addEventListener("keydown", e => {
 
 async function init() {
   try {
-    await Promise.all([fetchDebates(), fetchModels()]);
+    await Promise.all([fetchDebates(), fetchModels(), fetchConfig()]);
   } catch {
     homeState.style.display = "flex";
     debateView.style.display = "none";
