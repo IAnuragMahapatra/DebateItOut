@@ -57,6 +57,7 @@ print(f"Loaded {len(MODELS)} model(s): {', '.join(m['name'] for m in MODELS)}")
 
 DEFAULT_MAX_ROUNDS = int(os.getenv("DEFAULT_MAX_ROUNDS", "6"))
 MAX_CONTEXT_TOKENS = int(os.getenv("MAX_CONTEXT_TOKENS", "8000"))
+AUTO_ADVANCE = os.getenv("AUTO_ADVANCE", "false").lower() == "true"
 
 
 @asynccontextmanager
@@ -98,6 +99,11 @@ async def limit_body_size(request: Request, call_next):
 @app.get("/models")
 def get_models():
     return [{"id": m["id"], "name": m["name"], "type": m["type"]} for m in MODELS]
+
+
+@app.get("/config")
+def get_config():
+    return {"autoAdvance": AUTO_ADVANCE}
 
 
 # --- debate CRUD ---
