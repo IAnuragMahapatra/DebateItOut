@@ -1,31 +1,33 @@
 from __future__ import annotations
 
 import json
-
 import httpx
-
-# model dispatch layer
-# takes pre-assembled system + messages from the caller
-# context assembly is moderator.py's job
 
 HTTP_TIMEOUT = httpx.Timeout(120.0)
 
-
-async def chat_anthropic(model: dict, system: str, messages: list[dict]) -> dict:
+async def chat_anthropic(endpoint: dict, model_slug: str, system: str, messages: list[dict]) -> dict:
     headers: dict[str, str] = {
         "Content-Type": "application/json",
-        "x-api-key": model.get("apiKey", ""),
+        "x-api-key": endpoint["apiKey"],
+        "anthropic-version": "2023-06-01",
     }
-    if model.get("anthropicVersion"):
-        headers["anthropic-version"] = model["anthropicVersion"]
+    
+    # Strip trailing slash from base_url if present
+    base_url = endpoint["baseUrl"].rstrip("/")
+    # Anthropic's standard chat endpoint is /v1/messages
+    # If the base URL already ends with /v1/messages or similar, we should handle it, but standard is just base URL
+    if not base_url.endswith("/v1/messages"):
+        url = f"{base_url}/v1/messages"
+    else:
+        url = base_url
 
     async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
         response = await client.post(
-            model["apiUrl"],
+            url,
             headers=headers,
             json={
-                "model": model["slug"],
-                "max_tokens": model["maxTokens"],
+                "model": model_slug,
+                "max_tokens": 4096,
                 "system": system,
                 "messages": messages,
             },
@@ -43,29 +45,35 @@ async def chat_anthropic(model: dict, system: str, messages: list[dict]) -> dict
     text_block = next((c for c in content if c.get("type") == "text"), None)
     thinking_block = next((c for c in content if c.get("type") == "thinking"), None)
 
-    if not text_block:
-        print(f"[{model['name']}] Unexpected response shape: {json.dumps(data)}")
-
     return {
         "reply": text_block["text"] if text_block else "No response from model.",
         "thinking": thinking_block["thinking"] if thinking_block else None,
     }
 
 
-async def chat_openai(model: dict, messages: list[dict]) -> dict:
+async def chat_openai(endpoint: dict, model_slug: str, messages: list[dict]) -> dict:
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {model.get('apiKey', '')}",
+        "Authorization": f"Bearer {endpoint['apiKey']}",
     }
+
+    base_url = endpoint["baseUrl"].rstrip("/")
+    if not base_url.endswith("/chat/completions"):
+        if base_url.endswith("/v1"):
+            url = f"{base_url}/chat/completions"
+        else:
+            url = f"{base_url}/v1/chat/completions"
+    else:
+        url = base_url
 
     async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
         response = await client.post(
-            model["apiUrl"],
+            url,
             headers=headers,
             json={
-                "model": model["slug"],
+                "model": model_slug,
                 "messages": messages,
-                "max_tokens": model["maxTokens"],
+                "max_tokens": 4096,
             },
         )
 
@@ -80,17 +88,11 @@ async def chat_openai(model: dict, messages: list[dict]) -> dict:
     choice = (data.get("choices") or [{}])[0]
     content = (choice.get("message") or {}).get("content")
 
-    if not content:
-        print(f"[{model['name']}] Unexpected response shape: {json.dumps(data)}")
-
     return {"reply": content or "No response from model.", "thinking": None}
 
 
-async def dispatch(model: dict, system: str, messages: list[dict]) -> dict:
-    """Single entry point — routes to anthropic or openai based on model type."""
-    if model["type"] == "anthropic":
-        return await chat_anthropic(model, system, messages)
-    # OpenAI-compatible endpoints take system as the first message
+async def dispatch(endpoint: dict, model_slug: str, system: str, messages: list[dict]) -> dict:
+    if endpoint["type"] == "anthropic":
+        return await chat_anthropic(endpoint, model_slug, system, messages)
     full_messages = [{"role": "system", "content": system}] + messages
-    return await chat_openai(model, full_messages)
-
+    return await chat_openai(endpoint, model_slug, full_messages)
