@@ -75,6 +75,7 @@ The `/turn-preview` endpoint is handy for verifying isolation. You can see exact
 
 | Variable | Default | Description |
 | :---: | :---: | :---: |
+| `AUTO_ADVANCE` | `false` | Automatically advance turns without manual input. Toggled in the UI. |
 | `DEFAULT_MAX_ROUNDS` | `6` | Rounds per debate |
 | `MAX_CONTEXT_TOKENS` | `8000` | Context window budget per turn |
 | `MAX_CONTEXT_TOKENS_<MODEL_ID>` | unset | Per-model override |
