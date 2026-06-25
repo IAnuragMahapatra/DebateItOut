@@ -1,48 +1,36 @@
-import asyncio
-import json
-import subprocess
-import sys
-import textwrap
-import webbrowser
-from pathlib import Path
-
-import db
-import httpx
 import typer
 import uvicorn
+import textwrap
+import httpx
+import asyncio
+import json
+import webbrowser
+import subprocess
+import sys
+import os
+from pathlib import Path
 from rich.console import Console
 from rich.table import Table
+from rich import print as rprint
+import db
 
 app = typer.Typer(
     help="DebateItOut — multi-model AI debate orchestrator",
     rich_markup_mode="rich",
-    context_settings={"help_option_names": ["-h", "--help"]},
+    context_settings={"help_option_names": ["-h", "--help"]}
 )
 
 console = Console()
 
-# We can group subcommands
-debates_app = typer.Typer(help="Manage debates")
-endpoints_app = typer.Typer(help="Manage API endpoints")
-models_app = typer.Typer(help="Fetch available models")
-
-app.add_typer(debates_app, name="debates", help="Manage active and past debates")
-app.add_typer(
-    endpoints_app, name="endpoints", help="Manage API endpoints (OpenAI, Anthropic)"
-)
-app.add_typer(models_app, name="models", help="Dynamically fetch models from endpoints")
-
-
 PID_FILE = Path.home() / ".debateitout" / "server.pid"
-DEFAULT_PORT = 8080
+DEFAULT_PORT = 8769
 
-@app.command()
+# ━━━ SERVER CONTROL ━━━
+
+@app.command(rich_help_panel="SERVER CONTROL")
 def start(port: int = DEFAULT_PORT, log: bool = typer.Option(False, "--log", help="Run in foreground with visible logs")):
-    """
-    Launch the debate engine. Runs in background by default.
-    """
+    """Launch the debate engine. Runs in background by default."""
     if PID_FILE.exists():
-        # Check if actually running
         import psutil
         try:
             pid = int(PID_FILE.read_text().strip())
@@ -68,7 +56,6 @@ def start(port: int = DEFAULT_PORT, log: bool = typer.Option(False, "--log", hel
     console.print(textwrap.dedent(msg), style="bold blue")
     
     if log:
-        # We don't save PID file for foreground, user can Ctrl+C
         uvicorn.run("main:app", host="127.0.0.1", port=port, log_level="info")
     else:
         CREATE_NO_WINDOW = 0x08000000
@@ -82,11 +69,9 @@ def start(port: int = DEFAULT_PORT, log: bool = typer.Option(False, "--log", hel
         PID_FILE.write_text(str(p.pid))
         console.print("[italic]Server is running in the background.[/italic]")
 
-@app.command()
+@app.command(rich_help_panel="SERVER CONTROL")
 def stop():
-    """
-    Shut down the background debate engine.
-    """
+    """Shut down the background debate engine."""
     if not PID_FILE.exists():
         console.print("[bold yellow]No background server is running.[/bold yellow]")
         return
@@ -109,32 +94,24 @@ def stop():
         except Exception:
             pass
 
-@app.command()
+@app.command(rich_help_panel="SERVER CONTROL")
 def restart(port: int = DEFAULT_PORT):
-    """
-    Restart the background debate engine.
-    """
+    """Restart the background debate engine."""
     stop()
     import time
     time.sleep(1)
     start(port=port)
 
-
-@app.command()
+@app.command(rich_help_panel="SERVER CONTROL")
 def ui(port: int = DEFAULT_PORT):
-    """
-    Open the WebUI in your default browser.
-    """
+    """Open the WebUI in your default browser."""
     url = f"http://localhost:{port}"
     console.print(f"Opening WebUI at [bold cyan]{url}[/bold cyan]...")
     webbrowser.open(url)
 
-
-@app.command()
+@app.command(rich_help_panel="SERVER CONTROL")
 def status(port: int = DEFAULT_PORT):
-    """
-    Check if the engine is running.
-    """
+    """Check if the engine is running."""
     try:
         r = httpx.get(f"http://127.0.0.1:{port}/api/config", timeout=2.0)
         if r.status_code == 200:
@@ -142,20 +119,15 @@ def status(port: int = DEFAULT_PORT):
             console.print(f"Port: {port}")
             console.print(f"Auto-advance: {r.json().get('autoAdvance', False)}")
         else:
-            console.print(
-                f"[bold yellow]Server returned status {r.status_code}[/bold yellow]"
-            )
+            console.print(f"[bold yellow]Server returned status {r.status_code}[/bold yellow]")
     except httpx.RequestError:
         console.print("[bold red]DebateItOut is not running.[/bold red]")
 
+# ━━━ DEBATES ━━━
 
-# --- DEBATES ---
-
-
-@debates_app.command("list")
+@app.command(name="list", rich_help_panel="DEBATES")
 def list_debates():
     """List all active and past debates."""
-
     async def _list():
         await db.init_pool()
         d_list = await db.get_all_debates()
@@ -172,34 +144,31 @@ def list_debates():
         name = d.get("customName") or d.get("propositionPreview", "")[:30] + "..."
         rounds = f"{d['currentRound']} / {d['maxRounds']}"
         table.add_row(d["id"][:8], name, rounds, d["status"])
-
+    
     console.print(table)
 
-
-@debates_app.command("rm")
+@app.command(name="rm", rich_help_panel="DEBATES")
 def rm_debate(debate_id: str):
     """Delete a debate by ID."""
-
     async def _rm():
         await db.init_pool()
         res = await db.delete_debate(debate_id)
         await db.close_pool()
         return res
-
+    
     res = asyncio.run(_rm())
     if res:
         console.print(f"[green]Deleted debate {debate_id}[/green]")
     else:
-        console.print("[red]Debate not found or failed to delete[/red]")
+        console.print(f"[red]Debate not found or failed to delete[/red]")
 
-
-@debates_app.command("export")
+@app.command(name="export", rich_help_panel="DEBATES")
 def export_debate(debate_id: str, format: str = typer.Option(None, help="json or md")):
-    """Export a debate transcript."""
+    """Export a debate transcript (json or md)."""
     if format not in [None, "json", "md"]:
         console.print("[red]Format must be json or md[/red]")
         raise typer.Exit(1)
-
+        
     if format is None:
         format = typer.prompt("Export format? [json/md]")
 
@@ -212,14 +181,14 @@ def export_debate(debate_id: str, format: str = typer.Option(None, help="json or
         msgs = await db.get_messages(debate_id)
         await db.close_pool()
         return d, msgs
-
+        
     d, msgs = asyncio.run(_get())
     if not d:
         console.print(f"[red]Debate {debate_id} not found[/red]")
         raise typer.Exit(1)
 
     filename = f"debate_{debate_id[:8]}.{format}"
-
+    
     if format == "json":
         data = {"debate": d, "messages": msgs}
         with open(filename, "w") as f:
@@ -228,107 +197,76 @@ def export_debate(debate_id: str, format: str = typer.Option(None, help="json or
         with open(filename, "w") as f:
             f.write(f"# Debate: {d.get('proposition')}\n\n")
             for m in msgs:
-                f.write(
-                    f"### {m['faction']} - {m['modelId'].split('|')[-1]} (Round {m['round']})\n"
-                )
-                if m.get("teamMsg"):
+                f.write(f"### {m['faction']} - {m['modelId'].split('|')[-1]} (Round {m['round']})\n")
+                if m.get('teamMsg'):
                     f.write(f"**Team Message:**\n{m['teamMsg']}\n\n")
-                if m.get("argument"):
+                if m.get('argument'):
                     f.write(f"**Argument:**\n{m['argument']}\n\n")
                 f.write("---\n")
-
+                
     console.print(f"[green]Exported to {filename}[/green]")
 
+# ━━━ ENDPOINTS & MODELS ━━━
 
-# --- ENDPOINTS ---
-
-
-@endpoints_app.command("list")
+@app.command(name="endpoints", rich_help_panel="ENDPOINTS & MODELS")
 def list_endpoints():
     """List all connected API endpoints."""
-
     async def _list():
         await db.init_pool()
         ep = await db.get_all_endpoints()
         await db.close_pool()
         return ep
-
+        
     ep_list = asyncio.run(_list())
     if not ep_list:
         console.print("No endpoints configured.")
         return
-
+        
     table = Table("ID", "Name", "Type", "Base URL")
     for ep in ep_list:
         table.add_row(ep["id"][:8], ep["name"], ep["type"], ep["baseUrl"])
-
+    
     console.print(table)
 
-
-@endpoints_app.command("add")
+@app.command(name="add-endpoint", rich_help_panel="ENDPOINTS & MODELS")
 def add_endpoint():
     """Interactively add an OpenAI/Anthropic endpoint."""
     name = typer.prompt("Endpoint name (e.g. Local Ollama, OpenRouter)")
     ep_type = typer.prompt("Type [openai/anthropic]")
     base_url = typer.prompt("Base URL")
     api_key = typer.prompt("API Key", hide_input=True)
-
+    
     async def _add():
         await db.init_pool()
         ep = await db.create_endpoint(name, ep_type, base_url, api_key)
         await db.close_pool()
         return ep
-
+        
     ep = asyncio.run(_add())
     console.print(f"[green]Added endpoint {ep['id'][:8]} - {ep['name']}[/green]")
 
-
-# --- MODELS ---
-
-
-@models_app.command("list")
-def list_models(
-    endpoint_id: str = typer.Argument(
-        None, help="Optional endpoint ID prefix to filter"
-    ),
-):
+@app.command(name="models", rich_help_panel="ENDPOINTS & MODELS")
+def list_models(endpoint_id: str = typer.Argument(None, help="Optional endpoint ID prefix to filter")):
     """Fetch and list available models from endpoints."""
-    # Since models dynamically fetch via API, we hit the local server if running,
-    # but the instructions requested we can do it via DB too. Hitting DB logic directly is better since we may not have the server running.
-
     async def _fetch():
         await db.init_pool()
         endpoints = await db.get_all_endpoints()
         await db.close_pool()
-
+        
         all_models = []
         for ep in endpoints:
             if endpoint_id and not ep["id"].startswith(endpoint_id):
                 continue
-
+            
             try:
                 base_url = ep["baseUrl"].rstrip("/")
                 if ep["type"] == "anthropic":
-                    all_models.extend(
-                        [
-                            {
-                                "id": f"{ep['id']}|claude-3-5-sonnet-20240620",
-                                "name": "claude-3-5-sonnet",
-                                "endpoint": ep["name"],
-                            },
-                            {
-                                "id": f"{ep['id']}|claude-3-haiku-20240307",
-                                "name": "claude-3-haiku",
-                                "endpoint": ep["name"],
-                            },
-                        ]
-                    )
+                    all_models.extend([
+                        {"id": f"{ep['id']}|claude-3-5-sonnet-20240620", "name": "claude-3-5-sonnet", "endpoint": ep["name"]},
+                        {"id": f"{ep['id']}|claude-3-haiku-20240307", "name": "claude-3-haiku", "endpoint": ep["name"]}
+                    ])
                 else:
-                    url = (
-                        f"{base_url}/models"
-                        if not base_url.endswith("/v1")
-                        else f"{base_url}/models"
-                    )
+                    url = f"{base_url}/models" if not base_url.endswith("/v1") else f"{base_url}/models"
                     if not url.endswith("/models"):
                         url = f"{base_url}/v1/models"
                     async with httpx.AsyncClient(timeout=10.0) as client:
@@ -339,30 +277,22 @@ def list_models(
                             data_models = data.get("data", [])
                             for m in data_models:
                                 slug = m["id"]
-                                all_models.append(
-                                    {
-                                        "id": f"{ep['id']}|{slug}",
-                                        "name": slug,
-                                        "endpoint": ep["name"],
-                                    }
-                                )
+                                all_models.append({"id": f"{ep['id']}|{slug}", "name": slug, "endpoint": ep["name"]})
             except Exception as e:
-                console.print(
-                    f"[yellow]Failed to fetch from {ep['name']}: {e}[/yellow]"
-                )
+                console.print(f"[yellow]Failed to fetch from {ep['name']}: {e}[/yellow]")
         return all_models
 
     with console.status("Fetching models..."):
         m_list = asyncio.run(_fetch())
-
+        
     if not m_list:
         console.print("No models found.")
         return
-
+        
     table = Table("Model Name", "Endpoint", "Full ID")
     for m in m_list:
         table.add_row(m["name"], m["endpoint"], m["id"])
-
+    
     console.print(table)
 
 
