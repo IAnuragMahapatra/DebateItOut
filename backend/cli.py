@@ -22,6 +22,7 @@ epilog_text = """
 [bold]━━━ ENDPOINTS & MODELS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[/bold]
   [cyan]endpoints list[/cyan]     List all connected API endpoints
   [cyan]endpoints add[/cyan]      Interactively add an OpenAI/Anthropic endpoint
+  [cyan]endpoints rm[/cyan]       Remove an endpoint by ID
   [cyan]models list[/cyan]        Fetch and list available models from endpoints (with optional filter)
 
 [bold]━━━ EXAMPLES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[/bold]
@@ -308,6 +309,22 @@ def add_endpoint():
 
     ep = asyncio.run(_add())
     console.print(f"[green]Added endpoint {ep['id'][:8]} - {ep['name']}[/green]")
+
+
+@endpoints_app.command("rm")
+def rm_endpoint(ep_id: str):
+    """Remove an endpoint by ID."""
+    async def _rm():
+        await db.init_pool()
+        res = await db.delete_endpoint(ep_id)
+        await db.close_pool()
+        return res
+    
+    res = asyncio.run(_rm())
+    if res:
+        console.print(f"[green]Deleted endpoint {ep_id}[/green]")
+    else:
+        console.print(f"[red]Endpoint not found or failed to delete[/red]")
 
 
 @models_app.command("list")
