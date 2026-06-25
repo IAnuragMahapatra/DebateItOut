@@ -386,9 +386,13 @@ def list_models(
                     url = f"{base_url}/v1/models"
                     
                 async with httpx.AsyncClient(timeout=10.0) as client:
-                    headers = {"Authorization": f"Bearer {ep['apiKey']}"}
+                    headers = {}
+                    if ep.get("apiKey"):
+                        headers["Authorization"] = f"Bearer {ep['apiKey']}"
+                        
                     if ep["type"] == "anthropic":
-                        headers["x-api-key"] = ep["apiKey"]
+                        if ep.get("apiKey"):
+                            headers["x-api-key"] = ep["apiKey"]
                         headers["anthropic-version"] = "2023-06-01"
                         
                     resp = await client.get(url, headers=headers)

@@ -8,10 +8,11 @@ HTTP_TIMEOUT = httpx.Timeout(120.0)
 async def chat_anthropic(endpoint: dict, model_slug: str, system: str, messages: list[dict]) -> dict:
     headers: dict[str, str] = {
         "Content-Type": "application/json",
-        "x-api-key": endpoint["apiKey"],
         "anthropic-version": "2023-06-01",
     }
-    
+    if endpoint.get("apiKey"):
+        headers["x-api-key"] = endpoint["apiKey"]
+        
     # Strip trailing slash from base_url if present
     base_url = endpoint["baseUrl"].rstrip("/")
     # Anthropic's standard chat endpoint is /v1/messages
@@ -54,8 +55,9 @@ async def chat_anthropic(endpoint: dict, model_slug: str, system: str, messages:
 async def chat_openai(endpoint: dict, model_slug: str, messages: list[dict]) -> dict:
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {endpoint['apiKey']}",
     }
+    if endpoint.get("apiKey"):
+        headers["Authorization"] = f"Bearer {endpoint['apiKey']}"
 
     base_url = endpoint["baseUrl"].rstrip("/")
     if not base_url.endswith("/chat/completions"):
