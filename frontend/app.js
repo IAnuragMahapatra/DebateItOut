@@ -1,4 +1,4 @@
-const API = "";
+const API = "/api";
 marked.setOptions({ breaks: true, gfm: true });
 
 let debates = [];
