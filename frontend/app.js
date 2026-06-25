@@ -787,13 +787,10 @@ function renderPickers() {
 
 function renderPicker(container, selected, faction, opposing) {
   if (container.children.length === 0) {
-    let delay = 0;
     for (const m of models) {
       const btn = document.createElement("button");
       btn.dataset.id = m.id;
       btn.type = "button";
-      btn.style.animationDelay = `${delay}ms`;
-      delay += 25;
       
       btn.addEventListener("click", () => {
         if (btn.disabled) return;
@@ -1217,3 +1214,26 @@ if (fsDeclineBtn) {
     fsModal.style.display = "none";
   });
 }
+// Model Search Logic
+
+
+const factionASearch = $("#faction-a-search");
+const factionBSearch = $("#faction-b-search");
+
+function filterModels(input, container) {
+  if (!input || !container) return;
+  input.addEventListener("input", (e) => {
+    const q = e.target.value.toLowerCase();
+    for (const btn of container.children) {
+      const id = btn.dataset.id;
+      if (id.toLowerCase().includes(q)) {
+        btn.style.display = "inline-flex";
+      } else {
+        btn.style.display = "none";
+      }
+    }
+  });
+}
+
+filterModels(factionASearch, factionAPicker);
+filterModels(factionBSearch, factionBPicker);

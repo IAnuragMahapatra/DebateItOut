@@ -107,7 +107,10 @@
                   <input class="form-input" id="faction-a-stance-input" type="text" placeholder="for" value="for" />
                 </div>
                 <div class="form-group" style="flex: 1; min-height: 0;">
-                  <span class="form-label" id="faction-a-models-label">Models</span>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                    <span class="form-label" id="faction-a-models-label" style="margin-bottom: 0;">Models</span>
+                    <input type="search" id="faction-a-search" placeholder="Search..." class="form-input" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; width: 120px;" />
+                  </div>
                   <div class="model-picker" id="faction-a-picker" data-faction="A" aria-labelledby="faction-a-models-label"></div>
                 </div>
               </div>
@@ -124,7 +127,10 @@
                   <input class="form-input" id="faction-b-stance-input" type="text" placeholder="against" value="against" />
                 </div>
                 <div class="form-group" style="flex: 1; min-height: 0;">
-                  <span class="form-label" id="faction-b-models-label">Models</span>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                    <span class="form-label" id="faction-b-models-label" style="margin-bottom: 0;">Models</span>
+                    <input type="search" id="faction-b-search" placeholder="Search..." class="form-input" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; width: 120px;" />
+                  </div>
                   <div class="model-picker" id="faction-b-picker" data-faction="B" aria-labelledby="faction-b-models-label"></div>
                 </div>
               </div>
