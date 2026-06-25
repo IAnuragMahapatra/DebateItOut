@@ -14,7 +14,7 @@ async def chat_anthropic(endpoint: dict, model_slug: str, system: str, messages:
         headers["x-api-key"] = endpoint["apiKey"]
         
     # Strip trailing slash from base_url if present
-    base_url = endpoint["baseUrl"].rstrip("/")
+    base_url = endpoint["baseUrl"].strip().rstrip("/")
     # Anthropic's standard chat endpoint is /v1/messages
     # If the base URL already ends with /v1/messages or similar, we should handle it, but standard is just base URL
     if not base_url.endswith("/v1/messages"):
@@ -59,7 +59,7 @@ async def chat_openai(endpoint: dict, model_slug: str, messages: list[dict]) -> 
     if endpoint.get("apiKey"):
         headers["Authorization"] = f"Bearer {endpoint['apiKey']}"
 
-    base_url = endpoint["baseUrl"].rstrip("/")
+    base_url = endpoint["baseUrl"].strip().rstrip("/")
     if not base_url.endswith("/chat/completions"):
         if base_url.endswith("/v1"):
             url = f"{base_url}/chat/completions"

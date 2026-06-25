@@ -388,7 +388,7 @@ def list_models(
                 continue
 
             try:
-                base_url = ep["baseUrl"].rstrip("/")
+                base_url = ep["baseUrl"].strip().rstrip("/")
                 if base_url.endswith("/v1") or base_url.endswith("/api"):
                     url = f"{base_url}/models"
                 else:
