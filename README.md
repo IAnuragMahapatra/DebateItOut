@@ -11,25 +11,49 @@ A self-hosted multi-model AI debate engine. Set a proposition, pick two factions
 
 ## Setup
 
-DebateItOut is a zero-friction CLI tool. 
+DebateItOut is a zero-friction CLI tool.
 
 ```bash
 uv pip install -e backend/
 # or pip install -e backend/
 
-# Start the app
+# Start the app (runs in background)
 debate start
-```
 
-This launches the server at `http://localhost:3002`.
-*Note: You can also use `debateitout start`.*
+This launches the server at `http://localhost:8769`.
+*Note: You can also use `debateitout`.*
+
+## CLI Commands
+
+The `debate` CLI provides comprehensive control over the application, models, and endpoints:
+
+**Server Control:**
+- `debate start`: Launch the server in the background
+- `debate start --log`: Launch the server in the foreground with visible logs
+- `debate stop`: Stop the background server
+- `debate restart`: Restart the background server
+- `debate status`: Check if the server is running
+- `debate ui`: Open the dashboard in your default browser
+
+**Endpoints & Models:**
+- `debate endpoints list`: Show configured API endpoints
+- `debate endpoints add`: Interactively add a new endpoint
+- `debate endpoints rm <id>`: Remove an endpoint
+- `debate models list`: Discover and list all available models across your endpoints
+
+**Debates:**
+- `debate debates list`: List all debates
+- `debate debates export <id> --format <json|md>`: Export a debate transcript
+- `debate debates rm <id>`: Delete a debate
+
 
 ## Model configuration
 
-There are no `.env` files to configure. Configure your API endpoints directly in the UI via the **Settings / Endpoints** modal.
+There are no `.env` files to configure. You can configure your API endpoints either via the CLI (`debate endpoints add`) or directly in the UI via the **Settings / Endpoints** modal.
 
 You can add:
-- **OpenAI-Compatible endpoints** (like Groq, OpenRouter, Ollama)
+
+- **OpenAI-Compatible endpoints** (like Groq, OpenRouter, Ollama, acc proxy)
 - **Anthropic endpoints**
 
 Once added, the `/api/models` endpoint dynamically fetches the available models for you to build your factions.
