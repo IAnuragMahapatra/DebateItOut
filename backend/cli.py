@@ -18,11 +18,19 @@ epilog_text = """
   [cyan]debates list[/cyan]       List all active and past debates
   [cyan]debates rm[/cyan]         Delete a debate by ID
   [cyan]debates export[/cyan]     Export a debate transcript (json/md)
-
+  
 [bold]━━━ ENDPOINTS & MODELS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[/bold]
   [cyan]endpoints list[/cyan]     List all connected API endpoints
   [cyan]endpoints add[/cyan]      Interactively add an OpenAI/Anthropic endpoint
   [cyan]models list[/cyan]        Fetch and list available models from endpoints (with optional filter)
+
+[bold]━━━ EXAMPLES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[/bold]
+  [cyan]debate start[/cyan]              Launch background debate engine
+  [cyan]debate start --log[/cyan]        Launch with visible foreground logs
+  [cyan]debate start --port 9090[/cyan]  Launch on a custom port
+  [cyan]debate ui[/cyan]                 Open the WebUI dashboard in browser
+  [cyan]debate debates export[/cyan]     Export a debate transcript interactively
+  [cyan]debate models list[/cyan]        List available AI models
 """
 
 app = typer.Typer(
