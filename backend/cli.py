@@ -33,16 +33,25 @@ app.add_typer(
 app.add_typer(models_app, name="models", help="Dynamically fetch models from endpoints")
 
 
+PID_FILE = Path.home() / ".debateitout" / "server.pid"
+DEFAULT_PORT = 8080
+
 @app.command()
-def start(
-    port: int = 3002,
-    log: bool = typer.Option(
-        False, "--log", help="Run in foreground with visible logs"
-    ),
-):
+def start(port: int = DEFAULT_PORT, log: bool = typer.Option(False, "--log", help="Run in foreground with visible logs")):
     """
     Launch the debate engine. Runs in background by default.
     """
+    if PID_FILE.exists():
+        # Check if actually running
+        import psutil
+        try:
+            pid = int(PID_FILE.read_text().strip())
+            if psutil.pid_exists(pid):
+                console.print(f"[bold yellow]DebateItOut is already running (PID: {pid}).[/bold yellow]")
+                return
+        except Exception:
+            pass
+
     msg = f"""
     🌌 Launching DebateItOut...
     ╭────────────────────────────────────────────────╮
@@ -51,39 +60,68 @@ def start(
 
        ┌─ Local UI: http://localhost:{port}
        └─ API Base: http://localhost:{port}/api/
-
+       
        Next steps:
        • Open the UI in your browser to configure endpoints.
        • Check 'debate status' to ensure it's running.
     """
     console.print(textwrap.dedent(msg), style="bold blue")
-
+    
     if log:
+        # We don't save PID file for foreground, user can Ctrl+C
         uvicorn.run("main:app", host="127.0.0.1", port=port, log_level="info")
     else:
-        DETACHED_PROCESS = 0x00000008
-        subprocess.Popen(
-            [
-                sys.executable,
-                "-m",
-                "uvicorn",
-                "main:app",
-                "--host",
-                "127.0.0.1",
-                "--port",
-                str(port),
-                "--log-level",
-                "warning",
-            ],
-            creationflags=DETACHED_PROCESS,
+        CREATE_NO_WINDOW = 0x08000000
+        p = subprocess.Popen(
+            [sys.executable, "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", str(port), "--log-level", "warning"],
+            creationflags=CREATE_NO_WINDOW,
             close_fds=True,
-            cwd=str(Path(__file__).parent),
+            cwd=str(Path(__file__).parent)
         )
+        PID_FILE.parent.mkdir(parents=True, exist_ok=True)
+        PID_FILE.write_text(str(p.pid))
         console.print("[italic]Server is running in the background.[/italic]")
+
+@app.command()
+def stop():
+    """
+    Shut down the background debate engine.
+    """
+    if not PID_FILE.exists():
+        console.print("[bold yellow]No background server is running.[/bold yellow]")
+        return
+    
+    import psutil
+    try:
+        pid = int(PID_FILE.read_text().strip())
+        if psutil.pid_exists(pid):
+            p = psutil.Process(pid)
+            p.terminate()
+            p.wait(timeout=3)
+            console.print(f"[bold green]Stopped DebateItOut (PID: {pid}).[/bold green]")
+        else:
+            console.print("[bold yellow]Process no longer running.[/bold yellow]")
+    except Exception as e:
+        console.print(f"[bold red]Failed to stop server: {e}[/bold red]")
+    finally:
+        try:
+            PID_FILE.unlink(missing_ok=True)
+        except Exception:
+            pass
+
+@app.command()
+def restart(port: int = DEFAULT_PORT):
+    """
+    Restart the background debate engine.
+    """
+    stop()
+    import time
+    time.sleep(1)
+    start(port=port)
 
 
 @app.command()
-def ui(port: int = 3002):
+def ui(port: int = DEFAULT_PORT):
     """
     Open the WebUI in your default browser.
     """
@@ -93,7 +131,7 @@ def ui(port: int = 3002):
 
 
 @app.command()
-def status(port: int = 3002):
+def status(port: int = DEFAULT_PORT):
     """
     Check if the engine is running.
     """
