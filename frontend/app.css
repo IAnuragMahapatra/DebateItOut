@@ -111,7 +111,8 @@ body {
 .sidebar:not(.open) .sidebar-header { flex-direction: column; gap: 6px; padding: 0.7rem 0; border-bottom: none; align-items: center; }
 .sidebar:not(.open) .sidebar-title,
 .sidebar:not(.open) .sidebar-list,
-.sidebar:not(.open) .sidebar-search { display: none; }
+.sidebar:not(.open) .sidebar-search,
+.sidebar:not(.open) .sidebar-footer { display: none; }
 
 .sidebar-inner {
   width: var(--sidebar-width);
