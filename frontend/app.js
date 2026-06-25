@@ -1192,10 +1192,10 @@ const fsDeclineBtn = $("#fs-decline-btn");
 
 window.addEventListener("DOMContentLoaded", () => {
   const fsPreference = localStorage.getItem("debateitout-fs-pref");
-  if (!fsPreference && !document.fullscreenElement) {
+  if (fsPreference !== "declined" && !document.fullscreenElement) {
     // Show after a short delay so it's not jarring
     setTimeout(() => {
-      if (fsModal) fsModal.style.display = "flex";
+      if (fsModal && !document.fullscreenElement) fsModal.style.display = "flex";
     }, 1500);
   }
 });
@@ -1207,7 +1207,6 @@ if (fsAcceptBtn) {
         console.warn("Fullscreen request failed", err);
       });
     }
-    localStorage.setItem("debateitout-fs-pref", "accepted");
     fsModal.style.display = "none";
   });
 }
