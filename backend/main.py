@@ -72,6 +72,10 @@ async def delete_endpoint_api(ep_id: str):
         raise HTTPException(404, "Endpoint not found")
     return {"success": True}
 
+@app.get("/.well-known/appspecific/com.chrome.devtools.json")
+async def chrome_devtools():
+    return JSONResponse(status_code=200, content={})
+
 @app.put("/api/endpoints/{ep_id}")
 async def update_endpoint_api(ep_id: str, request: Request):
     body = await request.json()
