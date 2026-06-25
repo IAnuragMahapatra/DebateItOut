@@ -45,6 +45,15 @@
           </div>
 
           <div class="sidebar-list" id="sidebar-list"></div>
+          <div class="sidebar-footer" style="padding: 1rem; border-top: 1px solid var(--border); display: flex;">
+            <button class="settings-btn" id="settings-btn" title="Settings" aria-label="Settings" style="display: flex; align-items: center; gap: 0.5rem; background: none; border: none; cursor: pointer; color: var(--text-muted); font-family: inherit; font-size: 0.85rem; padding: 0.5rem; width: 100%; border-radius: 4px; transition: all 0.2s;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
+              <span>Settings</span>
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -237,6 +246,70 @@
       <div class="modal-footer">
         <button class="btn-ghost" id="export-md-confirm">Download MD</button>
         <button class="btn-primary" id="export-json-confirm">Download JSON</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fullscreen Modal -->
+  <div class="modal-overlay" id="fullscreen-modal" style="display:none; z-index: 9999;" role="dialog" aria-modal="true" aria-labelledby="fs-title">
+    <div class="modal modal-sm" style="text-align: center; padding: 2rem;">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto 1rem; color: var(--accent);">
+        <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+      </svg>
+      <h2 class="modal-title" id="fs-title" style="margin-bottom: 0.5rem; justify-content: center;">Immersive Experience</h2>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.5;">DebateItOut is best experienced in full screen to give the factions plenty of space to argue.</p>
+      <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+        <button class="btn-primary" id="fs-accept-btn">Enter Full Screen</button>
+        <button class="btn-ghost" id="fs-decline-btn">Continue as is</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settings-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <div class="modal" style="max-width: 600px;">
+      <div class="modal-header">
+        <h2 class="modal-title" id="settings-title">Settings</h2>
+        <button class="modal-close" id="settings-modal-close" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
+        <h3 style="font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 1rem;">API Endpoints</h3>
+        <div id="endpoints-list" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;">
+          <!-- Populated by JS -->
+        </div>
+        
+        <div id="endpoint-form-container" style="background: oklch(0% 0 0 / 0.03); padding: 1rem; border-radius: 6px; border: 1px solid var(--border);">
+          <h4 id="endpoint-form-title" style="margin-top: 0; margin-bottom: 1rem; font-size: 0.95rem; color: var(--text-main);">Add New Endpoint</h4>
+          <input type="hidden" id="ep-id" />
+          
+          <div class="form-group">
+            <label class="form-label" for="ep-name">Name</label>
+            <input class="form-input" id="ep-name" type="text" placeholder="e.g. Local Ollama, OpenRouter" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="ep-type">Type</label>
+            <select class="form-input" id="ep-type">
+              <option value="openai">OpenAI (Compatible)</option>
+              <option value="anthropic">Anthropic</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="ep-url">Base URL</label>
+            <input class="form-input" id="ep-url" type="text" placeholder="e.g. http://localhost:11434/v1" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="ep-key">API Key <span style="color:var(--text-muted); font-weight:normal;">(optional)</span></label>
+            <input class="form-input" id="ep-key" type="password" placeholder="sk-..." />
+          </div>
+          <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem;">
+            <button class="btn-ghost" id="ep-cancel-btn" style="display:none;">Cancel Edit</button>
+            <button class="btn-primary" id="ep-save-btn">Save Endpoint</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

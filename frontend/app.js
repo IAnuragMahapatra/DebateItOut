@@ -1061,3 +1061,160 @@ function exportToMarkdown() {
 }
 
 init().catch(console.error);
+// Fullscreen Prompt and Settings Modal Logic
+
+
+// ==========================================
+// Settings & Endpoints Management
+// ==========================================
+const settingsBtn = $("#settings-btn");
+const settingsModal = $("#settings-modal");
+const settingsModalClose = $("#settings-modal-close");
+const endpointsList = $("#endpoints-list");
+const epSaveBtn = $("#ep-save-btn");
+const epCancelBtn = $("#ep-cancel-btn");
+const epIdInput = $("#ep-id");
+const epNameInput = $("#ep-name");
+const epTypeSelect = $("#ep-type");
+const epUrlInput = $("#ep-url");
+const epKeyInput = $("#ep-key");
+const endpointFormTitle = $("#endpoint-form-title");
+
+async function loadEndpoints() {
+  try {
+    const endpoints = await api("/endpoints");
+    endpointsList.innerHTML = endpoints.map(ep => `
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; border: 1px solid var(--border); border-radius: 4px; background: var(--surface);">
+        <div>
+          <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.2rem;">${ep.name} <span style="font-size: 0.75rem; font-weight: normal; color: var(--text-muted); background: var(--bg); padding: 0.1rem 0.4rem; border-radius: 12px; margin-left: 0.5rem;">${ep.type}</span></div>
+          <div style="font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-mono);">${ep.baseUrl}</div>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn-ghost-sm edit-ep-btn" data-id="${ep.id}" data-ep='${JSON.stringify(ep).replace(/'/g, "&#39;")}'>Edit</button>
+          <button class="btn-ghost-sm delete-ep-btn" data-id="${ep.id}" style="color: oklch(55% 0.2 25);">Delete</button>
+        </div>
+      </div>
+    `).join("");
+    
+    $$(".edit-ep-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const ep = JSON.parse(btn.getAttribute("data-ep"));
+        epIdInput.value = ep.id;
+        epNameInput.value = ep.name;
+        epTypeSelect.value = ep.type;
+        epUrlInput.value = ep.baseUrl;
+        epKeyInput.value = "";
+        epKeyInput.placeholder = "(unchanged)";
+        endpointFormTitle.textContent = "Edit Endpoint";
+        epCancelBtn.style.display = "inline-block";
+        epSaveBtn.textContent = "Update";
+      });
+    });
+    
+    $$(".delete-ep-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        if (!confirm("Delete this endpoint?")) return;
+        try {
+          await api(`/endpoints/${btn.getAttribute("data-id")}`, { method: "DELETE" });
+          await loadEndpoints();
+          fetchModels(); // Refresh models list globally
+        } catch (err) {
+          alert("Error deleting endpoint: " + err.message);
+        }
+      });
+    });
+  } catch (err) {
+    console.error("Failed to load endpoints", err);
+  }
+}
+
+function resetEndpointForm() {
+  epIdInput.value = "";
+  epNameInput.value = "";
+  epTypeSelect.value = "openai";
+  epUrlInput.value = "";
+  epKeyInput.value = "";
+  epKeyInput.placeholder = "sk-...";
+  endpointFormTitle.textContent = "Add New Endpoint";
+  epCancelBtn.style.display = "none";
+  epSaveBtn.textContent = "Save Endpoint";
+}
+
+if (settingsBtn) {
+  settingsBtn.addEventListener("click", () => {
+    resetEndpointForm();
+    loadEndpoints();
+    settingsModal.style.display = "flex";
+  });
+}
+
+if (settingsModalClose) {
+  settingsModalClose.addEventListener("click", () => {
+    settingsModal.style.display = "none";
+  });
+}
+
+if (epCancelBtn) {
+  epCancelBtn.addEventListener("click", resetEndpointForm);
+}
+
+if (epSaveBtn) {
+  epSaveBtn.addEventListener("click", async () => {
+    const id = epIdInput.value;
+    const body = {
+      name: epNameInput.value,
+      type: epTypeSelect.value,
+      baseUrl: epUrlInput.value,
+      apiKey: epKeyInput.value || null
+    };
+    
+    try {
+      if (id) {
+        await api(`/endpoints/${id}`, { method: "PUT", body: JSON.stringify(body) });
+      } else {
+        await api("/endpoints", { method: "POST", body: JSON.stringify(body) });
+      }
+      resetEndpointForm();
+      await loadEndpoints();
+      fetchModels(); // Re-fetch models!
+    } catch (err) {
+      alert("Error saving endpoint: " + err.message);
+    }
+  });
+}
+
+// ==========================================
+// Fullscreen Prompt
+// ==========================================
+const fsModal = $("#fullscreen-modal");
+const fsAcceptBtn = $("#fs-accept-btn");
+const fsDeclineBtn = $("#fs-decline-btn");
+
+window.addEventListener("DOMContentLoaded", () => {
+  const fsPreference = localStorage.getItem("debateitout-fs-pref");
+  if (!fsPreference && !document.fullscreenElement) {
+    // Show after a short delay so it's not jarring
+    setTimeout(() => {
+      if (fsModal) fsModal.style.display = "flex";
+    }, 1500);
+  }
+});
+
+if (fsAcceptBtn) {
+  fsAcceptBtn.addEventListener("click", () => {
+    if (document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.warn("Fullscreen request failed", err);
+      });
+    }
+    localStorage.setItem("debateitout-fs-pref", "accepted");
+    fsModal.style.display = "none";
+  });
+}
+
+if (fsDeclineBtn) {
+  fsDeclineBtn.addEventListener("click", () => {
+    localStorage.setItem("debateitout-fs-pref", "declined");
+    fsModal.style.display = "none";
+  });
+}

@@ -55,7 +55,7 @@ async def create_endpoint_api(request: Request):
     
     if not type or type not in ["openai", "anthropic"]:
         raise HTTPException(400, "Type must be openai or anthropic")
-    if not base_url or not api_key:
+    if not base_url or api_key is None:
         raise HTTPException(400, "baseUrl and apiKey are required")
         
     ep = await db.create_endpoint(name, type, base_url, api_key)
@@ -72,6 +72,24 @@ async def delete_endpoint_api(ep_id: str):
         raise HTTPException(404, "Endpoint not found")
     return {"success": True}
 
+@app.put("/api/endpoints/{ep_id}")
+async def update_endpoint_api(ep_id: str, request: Request):
+    body = await request.json()
+    name = (body.get("name") or "").strip()
+    type = body.get("type")
+    base_url = body.get("baseUrl")
+    api_key = body.get("apiKey")
+    
+    if not type or type not in ["openai", "anthropic"]:
+        raise HTTPException(400, "Type must be openai or anthropic")
+    if not base_url or api_key is None:
+        raise HTTPException(400, "baseUrl and apiKey are required")
+        
+    ep = await db.update_endpoint(ep_id, name, type, base_url, api_key)
+    if not ep:
+        raise HTTPException(404, "Endpoint not found")
+    return ep
+
 # --- model pool ---
 
 @app.get("/api/models")
@@ -87,7 +105,7 @@ async def get_models():
             else:
                 url = f"{base_url}/v1/models"
                 
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=3.0) as client:
                 headers = {}
                 if ep.get("apiKey"):
                     headers["Authorization"] = f"Bearer {ep['apiKey']}"

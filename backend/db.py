@@ -309,6 +309,17 @@ async def get_all_endpoints() -> list[dict]:
             rows = await cursor.fetchall()
     return [_endpoint_row_to_dict(r) for r in rows]
 
+async def update_endpoint(ep_id: str, name: str, type: str, base_url: str, api_key: str) -> dict | None:
+    async with pool_conn() as conn:
+        await conn.execute(
+            "UPDATE endpoints SET name = ?, type = ?, base_url = ?, api_key = ? WHERE id = ?",
+            (name, type, base_url, api_key, ep_id)
+        )
+        await conn.commit()
+        async with conn.execute("SELECT * FROM endpoints WHERE id = ?", (ep_id,)) as cursor:
+            row = await cursor.fetchone()
+    return _endpoint_row_to_dict(row) if row else None
+
 async def delete_endpoint(ep_id: str) -> bool:
     async with pool_conn() as conn:
         cursor = await conn.execute("DELETE FROM endpoints WHERE id = ?", (ep_id,))
