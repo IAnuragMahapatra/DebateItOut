@@ -219,7 +219,7 @@ def rm_debate(debate_id: str):
             console.print("[yellow]Ambiguous debate ID prefix[/yellow]")
             await db.close_pool()
             return False
-            
+
         res = await db.delete_debate(matches[0]["id"])
         await db.close_pool()
         return res
@@ -252,13 +252,13 @@ def export_debate(debate_id: str, format: str = typer.Option(None, help="json or
             console.print("[yellow]Ambiguous debate ID prefix[/yellow]")
             await db.close_pool()
             return None, None
-            
+
         real_id = matches[0]["id"]
         d = await db.get_debate(real_id)
         msgs = await db.get_messages(real_id)
         await db.close_pool()
         return d, msgs
-        
+
     d, msgs = asyncio.run(_get())
     if not d:
         console.print(f"[red]Debate {debate_id} not found[/red]")
@@ -315,14 +315,22 @@ def list_endpoints():
 def add_endpoint():
     """Interactively add an OpenAI/Anthropic endpoint."""
     name = typer.prompt("Endpoint name (e.g. Local Ollama, OpenRouter)")
-    ep_type_raw = typer.prompt("Type [O/a] (OpenAI/Anthropic)", default="o").lower()
+    ep_type_raw = typer.prompt(
+        "Type (OpenAI/Anthropic)", default="o", show_default=False
+    ).lower()
     ep_type = "anthropic" if ep_type_raw.startswith("a") else "openai"
-    
+
     base_url = typer.prompt("Base URL (e.g. https://api.example.com/v1)")
     if not base_url.startswith("http"):
-        base_url = "http://" + base_url if "localhost" in base_url or "127.0.0.1" in base_url else "https://" + base_url
-        
-    api_key = typer.prompt("API Key", hide_input=True, default="")
+        base_url = (
+            "http://" + base_url
+            if "localhost" in base_url or "127.0.0.1" in base_url
+            else "https://" + base_url
+        )
+
+    api_key = typer.prompt(
+        "API Key (optional)", hide_input=True, default="", show_default=False
+    )
 
     async def _add():
         await db.init_pool()
@@ -337,6 +345,7 @@ def add_endpoint():
 @endpoints_app.command("rm")
 def rm_endpoint(ep_id: str):
     """Remove an endpoint by ID."""
+
     async def _rm():
         await db.init_pool()
         endpoints = await db.get_all_endpoints()
@@ -348,7 +357,7 @@ def rm_endpoint(ep_id: str):
             console.print("[yellow]Ambiguous endpoint ID prefix[/yellow]")
             await db.close_pool()
             return False
-            
+
         res = await db.delete_endpoint(matches[0]["id"])
         await db.close_pool()
         return res
@@ -384,34 +393,50 @@ def list_models(
                     url = f"{base_url}/models"
                 else:
                     url = f"{base_url}/v1/models"
-                    
+
                 async with httpx.AsyncClient(timeout=10.0) as client:
                     headers = {}
                     if ep.get("apiKey"):
                         headers["Authorization"] = f"Bearer {ep['apiKey']}"
-                        
+
                     if ep["type"] == "anthropic":
                         if ep.get("apiKey"):
                             headers["x-api-key"] = ep["apiKey"]
                         headers["anthropic-version"] = "2023-06-01"
-                        
+
                     resp = await client.get(url, headers=headers)
                     if resp.status_code == 200:
                         data = resp.json()
                         data_models = data.get("data", [])
                         for m in data_models:
                             slug = m["id"]
-                            all_models.append({"id": f"{ep['id']}|{slug}", "name": slug, "endpoint": ep["name"]})
+                            all_models.append(
+                                {
+                                    "id": f"{ep['id']}|{slug}",
+                                    "name": slug,
+                                    "endpoint": ep["name"],
+                                }
+                            )
                         continue  # Success, skip fallback
-            except Exception as e:
+            except Exception:
                 pass
-                
+
             # Fallback for Anthropic
             if ep["type"] == "anthropic":
-                all_models.extend([
-                    {"id": f"{ep['id']}|claude-3-5-sonnet-20240620", "name": "claude-3-5-sonnet", "endpoint": ep["name"]},
-                    {"id": f"{ep['id']}|claude-3-haiku-20240307", "name": "claude-3-haiku", "endpoint": ep["name"]}
-                ])
+                all_models.extend(
+                    [
+                        {
+                            "id": f"{ep['id']}|claude-3-5-sonnet-20240620",
+                            "name": "claude-3-5-sonnet",
+                            "endpoint": ep["name"],
+                        },
+                        {
+                            "id": f"{ep['id']}|claude-3-haiku-20240307",
+                            "name": "claude-3-haiku",
+                            "endpoint": ep["name"],
+                        },
+                    ]
+                )
         return all_models
 
     with console.status("Fetching models..."):
