@@ -210,7 +210,17 @@ def rm_debate(debate_id: str):
 
     async def _rm():
         await db.init_pool()
-        res = await db.delete_debate(debate_id)
+        debates = await db.get_all_debates()
+        matches = [d for d in debates if d["id"].startswith(debate_id)]
+        if not matches:
+            await db.close_pool()
+            return False
+        if len(matches) > 1:
+            console.print("[yellow]Ambiguous debate ID prefix[/yellow]")
+            await db.close_pool()
+            return False
+            
+        res = await db.delete_debate(matches[0]["id"])
         await db.close_pool()
         return res
 
@@ -233,14 +243,22 @@ def export_debate(debate_id: str, format: str = typer.Option(None, help="json or
 
     async def _get():
         await db.init_pool()
-        d = await db.get_debate(debate_id)
-        if not d:
+        debates = await db.get_all_debates()
+        matches = [d for d in debates if d["id"].startswith(debate_id)]
+        if not matches:
             await db.close_pool()
             return None, None
-        msgs = await db.get_messages(debate_id)
+        if len(matches) > 1:
+            console.print("[yellow]Ambiguous debate ID prefix[/yellow]")
+            await db.close_pool()
+            return None, None
+            
+        real_id = matches[0]["id"]
+        d = await db.get_debate(real_id)
+        msgs = await db.get_messages(real_id)
         await db.close_pool()
         return d, msgs
-
+        
     d, msgs = asyncio.run(_get())
     if not d:
         console.print(f"[red]Debate {debate_id} not found[/red]")
@@ -319,10 +337,19 @@ def add_endpoint():
 @endpoints_app.command("rm")
 def rm_endpoint(ep_id: str):
     """Remove an endpoint by ID."""
-
     async def _rm():
         await db.init_pool()
-        res = await db.delete_endpoint(ep_id)
+        endpoints = await db.get_all_endpoints()
+        matches = [ep for ep in endpoints if ep["id"].startswith(ep_id)]
+        if not matches:
+            await db.close_pool()
+            return False
+        if len(matches) > 1:
+            console.print("[yellow]Ambiguous endpoint ID prefix[/yellow]")
+            await db.close_pool()
+            return False
+            
+        res = await db.delete_endpoint(matches[0]["id"])
         await db.close_pool()
         return res
 
