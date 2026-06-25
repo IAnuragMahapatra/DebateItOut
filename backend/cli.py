@@ -14,16 +14,37 @@ from rich.table import Table
 from rich import print as rprint
 import db
 
+epilog_text = """
+[bold]━━━ DEBATES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[/bold]
+  [cyan]debates list[/cyan]       List all active and past debates
+  [cyan]debates rm[/cyan]         Delete a debate by ID
+  [cyan]debates export[/cyan]     Export a debate transcript (json/md)
+  
+[bold]━━━ ENDPOINTS & MODELS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[/bold]
+  [cyan]endpoints list[/cyan]     List all connected API endpoints
+  [cyan]endpoints add[/cyan]      Interactively add an OpenAI/Anthropic endpoint
+  [cyan]models list[/cyan]        Fetch and list available models from endpoints (with optional filter)
+"""
+
 app = typer.Typer(
     help="DebateItOut — multi-model AI debate orchestrator",
     rich_markup_mode="rich",
-    context_settings={"help_option_names": ["-h", "--help"]}
+    context_settings={"help_option_names": ["-h", "--help"]},
+    epilog=epilog_text
 )
 
 console = Console()
 
 PID_FILE = Path.home() / ".debateitout" / "server.pid"
 DEFAULT_PORT = 8769
+
+debates_app = typer.Typer(help="Manage active and past debates")
+endpoints_app = typer.Typer(help="Manage API endpoints (OpenAI, Anthropic)")
+models_app = typer.Typer(help="Dynamically fetch models from endpoints")
+
+app.add_typer(debates_app, name="debates")
+app.add_typer(endpoints_app, name="endpoints")
+app.add_typer(models_app, name="models")
 
 # ━━━ SERVER CONTROL ━━━
 
@@ -125,7 +146,7 @@ def status(port: int = DEFAULT_PORT):
 
 # ━━━ DEBATES ━━━
 
-@app.command(name="list", rich_help_panel="DEBATES")
+@debates_app.command("list")
 def list_debates():
     """List all active and past debates."""
     async def _list():
@@ -147,7 +168,7 @@ def list_debates():
     
     console.print(table)
 
-@app.command(name="rm", rich_help_panel="DEBATES")
+@debates_app.command("rm")
 def rm_debate(debate_id: str):
     """Delete a debate by ID."""
     async def _rm():
@@ -162,7 +183,7 @@ def rm_debate(debate_id: str):
     else:
         console.print(f"[red]Debate not found or failed to delete[/red]")
 
-@app.command(name="export", rich_help_panel="DEBATES")
+@debates_app.command("export")
 def export_debate(debate_id: str, format: str = typer.Option(None, help="json or md")):
     """Export a debate transcript (json or md)."""
     if format not in [None, "json", "md"]:
@@ -208,7 +229,7 @@ def export_debate(debate_id: str, format: str = typer.Option(None, help="json or
 
 # ━━━ ENDPOINTS & MODELS ━━━
 
-@app.command(name="endpoints", rich_help_panel="ENDPOINTS & MODELS")
+@endpoints_app.command("list")
 def list_endpoints():
     """List all connected API endpoints."""
     async def _list():
@@ -228,7 +249,7 @@ def list_endpoints():
     
     console.print(table)
 
-@app.command(name="add-endpoint", rich_help_panel="ENDPOINTS & MODELS")
+@endpoints_app.command("add")
 def add_endpoint():
     """Interactively add an OpenAI/Anthropic endpoint."""
     name = typer.prompt("Endpoint name (e.g. Local Ollama, OpenRouter)")
@@ -245,7 +266,7 @@ def add_endpoint():
     ep = asyncio.run(_add())
     console.print(f"[green]Added endpoint {ep['id'][:8]} - {ep['name']}[/green]")
 
-@app.command(name="models", rich_help_panel="ENDPOINTS & MODELS")
+@models_app.command("list")
 def list_models(endpoint_id: str = typer.Argument(None, help="Optional endpoint ID prefix to filter")):
     """Fetch and list available models from endpoints."""
     async def _fetch():
