@@ -82,32 +82,36 @@ async def get_models():
     async def fetch_models(ep):
         try:
             base_url = ep["baseUrl"].rstrip("/")
-            # If Anthropic, standard models endpoint is new, we fallback to hardcoded list or allow manually typing
-            if ep["type"] == "anthropic":
-                # Currently we'll just mock 2 standard models, ideally we query /v1/models if the API supports it
-                # For safety, let's just use hardcoded popular Anthropic models
-                return [
-                    {"id": f"{ep['id']}|claude-3-5-sonnet-20240620", "name": "claude-3-5-sonnet", "type": "anthropic", "endpointId": ep["id"]},
-                    {"id": f"{ep['id']}|claude-3-haiku-20240307", "name": "claude-3-haiku", "type": "anthropic", "endpointId": ep["id"]}
-                ]
+            if base_url.endswith("/v1") or base_url.endswith("/api"):
+                url = f"{base_url}/models"
             else:
-                # OpenAI compatible
-                url = f"{base_url}/models" if not base_url.endswith("/v1") else f"{base_url}/models"
-                if not url.endswith("/models"):
-                    url = f"{base_url}/v1/models"
-                async with httpx.AsyncClient(timeout=10.0) as client:
-                    headers = {"Authorization": f"Bearer {ep['apiKey']}"}
-                    resp = await client.get(url, headers=headers)
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        data_models = data.get("data", [])
-                        res = []
-                        for m in data_models:
-                            slug = m["id"]
-                            res.append({"id": f"{ep['id']}|{slug}", "name": slug, "type": ep["type"], "endpointId": ep["id"]})
-                        return res
+                url = f"{base_url}/v1/models"
+                
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                headers = {"Authorization": f"Bearer {ep['apiKey']}"}
+                if ep["type"] == "anthropic":
+                    headers["x-api-key"] = ep["apiKey"]
+                    headers["anthropic-version"] = "2023-06-01"
+                    
+                resp = await client.get(url, headers=headers)
+                
+            if resp.status_code == 200:
+                data = resp.json()
+                data_models = data.get("data", [])
+                res = []
+                for m in data_models:
+                    slug = m["id"]
+                    res.append({"id": f"{ep['id']}|{slug}", "name": slug, "type": ep["type"], "endpointId": ep["id"]})
+                return res
         except Exception as e:
             print(f"Error fetching models from {ep['name']}: {e}")
+            
+        # Fallback for anthropic if /v1/models is not supported
+        if ep["type"] == "anthropic":
+            return [
+                {"id": f"{ep['id']}|claude-3-5-sonnet-20240620", "name": "claude-3-5-sonnet", "type": "anthropic", "endpointId": ep["id"]},
+                {"id": f"{ep['id']}|claude-3-haiku-20240307", "name": "claude-3-haiku", "type": "anthropic", "endpointId": ep["id"]}
+            ]
         return []
     
     tasks = [fetch_models(ep) for ep in endpoints]

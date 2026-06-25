@@ -18,7 +18,7 @@ epilog_text = """
   [cyan]debates list[/cyan]       List all active and past debates
   [cyan]debates rm[/cyan]         Delete a debate by ID
   [cyan]debates export[/cyan]     Export a debate transcript (json/md)
-  
+
 [bold]━━━ ENDPOINTS & MODELS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[/bold]
   [cyan]endpoints list[/cyan]     List all connected API endpoints
   [cyan]endpoints add[/cyan]      Interactively add an OpenAI/Anthropic endpoint
@@ -97,10 +97,10 @@ def start(
         uvicorn.run("main:app", host="127.0.0.1", port=port, log_level="info")
     else:
         CREATE_NO_WINDOW = 0x08000000
-        
+
         log_file = PID_FILE.parent / "server.log"
         log_file.parent.mkdir(parents=True, exist_ok=True)
-        
+
         with open(log_file, "a") as f:
             p = subprocess.Popen(
                 [sys.argv[0], "start", "--port", str(port), "--log"],
@@ -108,9 +108,9 @@ def start(
                 close_fds=True,
                 cwd=str(Path(__file__).parent),
                 stdout=f,
-                stderr=f
+                stderr=f,
             )
-            
+
         PID_FILE.write_text(str(p.pid))
         console.print("[italic]Server is running in the background.[/italic]")
 
@@ -314,17 +314,18 @@ def add_endpoint():
 @endpoints_app.command("rm")
 def rm_endpoint(ep_id: str):
     """Remove an endpoint by ID."""
+
     async def _rm():
         await db.init_pool()
         res = await db.delete_endpoint(ep_id)
         await db.close_pool()
         return res
-    
+
     res = asyncio.run(_rm())
     if res:
         console.print(f"[green]Deleted endpoint {ep_id}[/green]")
     else:
-        console.print(f"[red]Endpoint not found or failed to delete[/red]")
+        console.print("[red]Endpoint not found or failed to delete[/red]")
 
 
 @models_app.command("list")
@@ -347,48 +348,34 @@ def list_models(
 
             try:
                 base_url = ep["baseUrl"].rstrip("/")
-                if ep["type"] == "anthropic":
-                    all_models.extend(
-                        [
-                            {
-                                "id": f"{ep['id']}|claude-3-5-sonnet-20240620",
-                                "name": "claude-3-5-sonnet",
-                                "endpoint": ep["name"],
-                            },
-                            {
-                                "id": f"{ep['id']}|claude-3-haiku-20240307",
-                                "name": "claude-3-haiku",
-                                "endpoint": ep["name"],
-                            },
-                        ]
-                    )
+                if base_url.endswith("/v1") or base_url.endswith("/api"):
+                    url = f"{base_url}/models"
                 else:
-                    url = (
-                        f"{base_url}/models"
-                        if not base_url.endswith("/v1")
-                        else f"{base_url}/models"
-                    )
-                    if not url.endswith("/models"):
-                        url = f"{base_url}/v1/models"
-                    async with httpx.AsyncClient(timeout=10.0) as client:
-                        headers = {"Authorization": f"Bearer {ep['apiKey']}"}
-                        resp = await client.get(url, headers=headers)
-                        if resp.status_code == 200:
-                            data = resp.json()
-                            data_models = data.get("data", [])
-                            for m in data_models:
-                                slug = m["id"]
-                                all_models.append(
-                                    {
-                                        "id": f"{ep['id']}|{slug}",
-                                        "name": slug,
-                                        "endpoint": ep["name"],
-                                    }
-                                )
+                    url = f"{base_url}/v1/models"
+                    
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    headers = {"Authorization": f"Bearer {ep['apiKey']}"}
+                    if ep["type"] == "anthropic":
+                        headers["x-api-key"] = ep["apiKey"]
+                        headers["anthropic-version"] = "2023-06-01"
+                        
+                    resp = await client.get(url, headers=headers)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        data_models = data.get("data", [])
+                        for m in data_models:
+                            slug = m["id"]
+                            all_models.append({"id": f"{ep['id']}|{slug}", "name": slug, "endpoint": ep["name"]})
+                        continue  # Success, skip fallback
             except Exception as e:
-                console.print(
-                    f"[yellow]Failed to fetch from {ep['name']}: {e}[/yellow]"
-                )
+                pass
+                
+            # Fallback for Anthropic
+            if ep["type"] == "anthropic":
+                all_models.extend([
+                    {"id": f"{ep['id']}|claude-3-5-sonnet-20240620", "name": "claude-3-5-sonnet", "endpoint": ep["name"]},
+                    {"id": f"{ep['id']}|claude-3-haiku-20240307", "name": "claude-3-haiku", "endpoint": ep["name"]}
+                ])
         return all_models
 
     with console.status("Fetching models..."):
