@@ -297,9 +297,14 @@ def list_endpoints():
 def add_endpoint():
     """Interactively add an OpenAI/Anthropic endpoint."""
     name = typer.prompt("Endpoint name (e.g. Local Ollama, OpenRouter)")
-    ep_type = typer.prompt("Type [openai/anthropic]")
-    base_url = typer.prompt("Base URL")
-    api_key = typer.prompt("API Key", hide_input=True)
+    ep_type_raw = typer.prompt("Type [O/a] (OpenAI/Anthropic)", default="o").lower()
+    ep_type = "anthropic" if ep_type_raw.startswith("a") else "openai"
+    
+    base_url = typer.prompt("Base URL (e.g. https://api.example.com/v1)")
+    if not base_url.startswith("http"):
+        base_url = "http://" + base_url if "localhost" in base_url or "127.0.0.1" in base_url else "https://" + base_url
+        
+    api_key = typer.prompt("API Key", hide_input=True, default="")
 
     async def _add():
         await db.init_pool()
